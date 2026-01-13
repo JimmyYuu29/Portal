@@ -1,0 +1,176 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>InformePT Portal</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            min-height: 100vh;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            padding: 20px;
+        }
+
+        .container {
+            background: white;
+            border-radius: 20px;
+            box-shadow: 0 20px 60px rgba(0, 0, 0, 0.3);
+            padding: 60px;
+            max-width: 900px;
+            width: 100%;
+        }
+
+        h1 {
+            color: #333;
+            margin-bottom: 10px;
+            font-size: 2.5em;
+            text-align: center;
+        }
+
+        .subtitle {
+            color: #666;
+            text-align: center;
+            margin-bottom: 50px;
+            font-size: 1.1em;
+        }
+
+        .server-info {
+            background: #f0f4f8;
+            border-radius: 10px;
+            padding: 15px 20px;
+            margin-bottom: 40px;
+            text-align: center;
+            font-family: monospace;
+            color: #555;
+        }
+
+        .apps {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(350px, 1fr));
+            gap: 30px;
+            margin-top: 30px;
+        }
+
+        .app-card {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            border-radius: 15px;
+            padding: 35px;
+            text-decoration: none;
+            color: white;
+            transition: transform 0.3s, box-shadow 0.3s;
+            box-shadow: 0 5px 15px rgba(0, 0, 0, 0.1);
+        }
+
+        .app-card:hover {
+            transform: translateY(-8px);
+            box-shadow: 0 15px 40px rgba(0, 0, 0, 0.2);
+        }
+
+        .app-card h2 {
+            margin-bottom: 15px;
+            font-size: 1.6em;
+        }
+
+        .app-card p {
+            font-size: 1em;
+            line-height: 1.7;
+            opacity: 0.9;
+            margin-bottom: 15px;
+        }
+
+        .badge {
+            display: inline-block;
+            background: rgba(255, 255, 255, 0.2);
+            padding: 8px 18px;
+            border-radius: 20px;
+            font-size: 0.9em;
+            margin-top: 10px;
+        }
+
+        .status {
+            text-align: center;
+            margin-top: 40px;
+            padding: 20px;
+            background: #f8f9fa;
+            border-radius: 10px;
+        }
+
+        .status-indicator {
+            display: inline-block;
+            width: 12px;
+            height: 12px;
+            background: #28a745;
+            border-radius: 50%;
+            margin-right: 10px;
+            animation: pulse 2s infinite;
+        }
+
+        @keyframes pulse {
+            0%, 100% { opacity: 1; transform: scale(1); }
+            50% { opacity: 0.6; transform: scale(0.95); }
+        }
+
+        .footer {
+            text-align: center;
+            margin-top: 40px;
+            color: #999;
+            font-size: 0.9em;
+        }
+
+        @media (max-width: 768px) {
+            .container {
+                padding: 30px;
+            }
+            h1 {
+                font-size: 1.8em;
+            }
+            .apps {
+                grid-template-columns: 1fr;
+            }
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1>InformePT Portal</h1>
+        <p class="subtitle">Unified Application Portal</p>
+
+        <div class="server-info">
+            Server: 80.225.186.223
+        </div>
+
+        <div class="apps">
+            <a href="/app/" class="app-card">
+                <h2>Streamlit Version</h2>
+                <p>Interactive web application with visualization interface and real-time data analysis. Ideal for data exploration, report generation, and demos.</p>
+                <span class="badge">Port: 8501 | Path: /app/</span>
+            </a>
+
+            <a href="/api/docs" class="app-card">
+                <h2>API Version</h2>
+                <p>RESTful API interface providing high-performance programmatic access. Ideal for system integration, automation, and batch processing.</p>
+                <span class="badge">Port: 8000 | Path: /api/</span>
+            </a>
+        </div>
+
+        <div class="status">
+            <span class="status-indicator"></span>
+            <strong>System Status:</strong> All services running normally
+        </div>
+
+        <div class="footer">
+            <p>InformePT Portal v1.0 | Powered by Nginx</p>
+        </div>
+    </div>
+</body>
+</html>

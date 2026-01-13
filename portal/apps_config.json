@@ -1,77 +1,43 @@
 {
-  "portal_name": "Consulting Tools Portal",
-  "portal_description": "咨询事务所内部自动化工具统一入口 | Internal Automation Tools Portal",
+  "portal_name": "InformePT Portal",
+  "portal_description": "InformePT应用统一入口 | Unified Access Portal for InformePT",
+  "server_ip": "80.225.186.223",
   "categories": [
     {
-      "id": "tax",
-      "name": "税务工具 / Tax Tools",
-      "icon": "file-text",
-      "description": "税务相关自动化工具"
-    },
-    {
-      "id": "audit",
-      "name": "审计工具 / Audit Tools",
-      "icon": "check-circle",
-      "description": "审计相关自动化工具"
-    },
-    {
-      "id": "esg",
-      "name": "ESG工具 / ESG Tools",
-      "icon": "leaf",
-      "description": "环境、社会和治理相关工具"
-    },
-    {
-      "id": "data",
-      "name": "数据分析 / Data Analytics",
-      "icon": "bar-chart-2",
-      "description": "数据处理和分析工具"
-    },
-    {
-      "id": "admin",
-      "name": "管理工具 / Admin Tools",
-      "icon": "settings",
-      "description": "系统管理和配置工具"
+      "id": "informept",
+      "name": "InformePT应用 / InformePT Apps",
+      "icon": "layout-dashboard",
+      "description": "InformePT报告生成应用的不同版本"
     }
   ],
   "apps": [
     {
-      "id": "tax-calculator",
-      "name": "税务计算器",
-      "name_en": "Tax Calculator",
-      "description": "企业所得税、增值税等税务计算工具",
-      "category": "tax",
-      "url": "/apps/tax-calculator",
-      "icon": "calculator",
+      "id": "informept-streamlit",
+      "name": "InformePT Streamlit版",
+      "name_en": "InformePT Streamlit",
+      "description": "交互式Web应用，提供可视化界面和实时数据分析功能。适合数据探索和演示。",
+      "category": "informept",
+      "url": "/app/",
+      "icon": "bar-chart-2",
       "enabled": true,
       "version": "1.0.0",
-      "maintainer": "Tax Tech Team",
-      "tags": ["tax", "calculator", "enterprise"]
+      "maintainer": "InformePT Team",
+      "tags": ["streamlit", "web", "interactive", "visualization"],
+      "port": 8501
     },
     {
-      "id": "audit-checklist",
-      "name": "审计检查清单",
-      "name_en": "Audit Checklist",
-      "description": "标准审计流程检查清单管理",
-      "category": "audit",
-      "url": "/apps/audit-checklist",
-      "icon": "clipboard-check",
+      "id": "informept-api",
+      "name": "InformePT API版",
+      "name_en": "InformePT API",
+      "description": "RESTful API接口，提供高性能的程序化访问。适合系统集成和自动化调用。",
+      "category": "informept",
+      "url": "/api/docs",
+      "icon": "zap",
       "enabled": true,
       "version": "1.0.0",
-      "maintainer": "Audit Tech Team",
-      "tags": ["audit", "checklist", "compliance"]
-    },
-    {
-      "id": "esg-report",
-      "name": "ESG报告生成器",
-      "name_en": "ESG Report Generator",
-      "description": "自动生成ESG合规报告",
-      "category": "esg",
-      "url": "/apps/esg-report",
-      "icon": "file-plus",
-      "enabled": true,
-      "version": "1.0.0",
-      "maintainer": "ESG Tech Team",
-      "tags": ["esg", "report", "sustainability"]
+      "maintainer": "InformePT Team",
+      "tags": ["api", "fastapi", "rest", "automation"],
+      "port": 8000
     }
   ]
 }

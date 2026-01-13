@@ -1,0 +1,171 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>{{ portal_name }}</title>
+    <link rel="stylesheet" href="{{ url_for('static', filename='css/style.css') }}">
+    <script src="https://unpkg.com/lucide@latest"></script>
+</head>
+<body>
+    <!-- 顶部导航栏 -->
+    <header class="header">
+        <div class="header-content">
+            <div class="logo">
+                <i data-lucide="layout-grid"></i>
+                <h1>{{ portal_name }}</h1>
+            </div>
+            <p class="tagline">{{ portal_description }}</p>
+        </div>
+    </header>
+
+    <main class="main-content">
+        <!-- 统计卡片区域 -->
+        <section class="stats-section">
+            <h2 class="section-title">
+                <i data-lucide="bar-chart-3"></i>
+                访问统计 / Statistics
+            </h2>
+            <div class="stats-grid">
+                <div class="stat-card">
+                    <div class="stat-icon">
+                        <i data-lucide="eye"></i>
+                    </div>
+                    <div class="stat-info">
+                        <span class="stat-value" id="today-pv">{{ stats.today.page_views }}</span>
+                        <span class="stat-label">今日访问 / Today PV</span>
+                    </div>
+                </div>
+                <div class="stat-card">
+                    <div class="stat-icon">
+                        <i data-lucide="users"></i>
+                    </div>
+                    <div class="stat-info">
+                        <span class="stat-value" id="today-uv">{{ stats.today.unique_visitors }}</span>
+                        <span class="stat-label">今日访客 / Today UV</span>
+                    </div>
+                </div>
+                <div class="stat-card">
+                    <div class="stat-icon">
+                        <i data-lucide="trending-up"></i>
+                    </div>
+                    <div class="stat-info">
+                        <span class="stat-value" id="total-pv">{{ stats.total.page_views }}</span>
+                        <span class="stat-label">总访问量 / Total PV</span>
+                    </div>
+                </div>
+                <div class="stat-card">
+                    <div class="stat-icon">
+                        <i data-lucide="user-check"></i>
+                    </div>
+                    <div class="stat-info">
+                        <span class="stat-value" id="total-uv">{{ stats.total.unique_visitors }}</span>
+                        <span class="stat-label">总访客数 / Total UV</span>
+                    </div>
+                </div>
+            </div>
+
+            <!-- 热门APP统计 -->
+            {% if stats.top_apps %}
+            <div class="top-apps-section">
+                <h3 class="subsection-title">
+                    <i data-lucide="flame"></i>
+                    热门工具 / Popular Tools
+                </h3>
+                <div class="top-apps-list">
+                    {% for app_stat in stats.top_apps[:5] %}
+                    <div class="top-app-item">
+                        <span class="rank">{{ loop.index }}</span>
+                        <span class="app-name">{{ app_stat.app_id }}</span>
+                        <span class="visit-count">{{ app_stat.total_visits }} 次访问</span>
+                    </div>
+                    {% endfor %}
+                </div>
+            </div>
+            {% endif %}
+        </section>
+
+        <!-- APP列表区域 -->
+        <section class="apps-section">
+            <h2 class="section-title">
+                <i data-lucide="grid-3x3"></i>
+                工具列表 / Tools
+            </h2>
+
+            {% for cat_id, category in apps_by_category.items() %}
+            <div class="category-group">
+                <h3 class="category-title">
+                    <i data-lucide="{{ category.icon }}"></i>
+                    {{ category.name }}
+                </h3>
+                <div class="apps-grid">
+                    {% for app in category.apps %}
+                    <a href="{{ url_for('go_to_app', app_id=app.id) }}" class="app-card" data-app-id="{{ app.id }}">
+                        <div class="app-icon">
+                            <i data-lucide="{{ app.icon | default('box') }}"></i>
+                        </div>
+                        <div class="app-info">
+                            <h4 class="app-name">{{ app.name }}</h4>
+                            {% if app.name_en %}
+                            <span class="app-name-en">{{ app.name_en }}</span>
+                            {% endif %}
+                            <p class="app-description">{{ app.description }}</p>
+                            {% if app.tags %}
+                            <div class="app-tags">
+                                {% for tag in app.tags[:3] %}
+                                <span class="tag">{{ tag }}</span>
+                                {% endfor %}
+                            </div>
+                            {% endif %}
+                        </div>
+                        <div class="app-arrow">
+                            <i data-lucide="chevron-right"></i>
+                        </div>
+                    </a>
+                    {% endfor %}
+                </div>
+            </div>
+            {% endfor %}
+
+            {% if not apps_by_category %}
+            <div class="empty-state">
+                <i data-lucide="inbox"></i>
+                <p>暂无可用工具 / No tools available</p>
+                <span>请联系管理员添加工具 / Please contact admin to add tools</span>
+            </div>
+            {% endif %}
+        </section>
+    </main>
+
+    <!-- 页脚 -->
+    <footer class="footer">
+        <div class="footer-content">
+            <p>
+                <i data-lucide="shield-check"></i>
+                Internal Automation Tool Portal | Based on Standard v3.1
+            </p>
+            <p class="footer-note">
+                Consulting Technology Team
+            </p>
+        </div>
+    </footer>
+
+    <script>
+        // 初始化Lucide图标
+        lucide.createIcons();
+
+        // 自动刷新统计数据（每60秒）
+        setInterval(function() {
+            fetch('/api/stats')
+                .then(response => response.json())
+                .then(data => {
+                    document.getElementById('today-pv').textContent = data.today.page_views;
+                    document.getElementById('today-uv').textContent = data.today.unique_visitors;
+                    document.getElementById('total-pv').textContent = data.total.page_views;
+                    document.getElementById('total-uv').textContent = data.total.unique_visitors;
+                })
+                .catch(err => console.log('Stats update failed:', err));
+        }, 60000);
+    </script>
+</body>
+</html>

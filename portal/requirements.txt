@@ -1,0 +1,11 @@
+# Portal - 咨询事务所内部自动化工具统一入口
+# Requirements for Consulting Tools Portal
+
+# Web Framework
+Flask>=2.3.0
+
+# Production WSGI Server
+gunicorn>=21.0.0
+
+# Optional: For enhanced security
+python-dotenv>=1.0.0

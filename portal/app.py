@@ -128,9 +128,9 @@ def get_apps_by_category():
             'apps': []
         }
 
-    # 添加"其他"分类
+    # Añadir categoría "Otros"
     categorized['other'] = {
-        'name': '其他 / Other',
+        'name': 'Otros',
         'icon': 'more-horizontal',
         'apps': []
     }
@@ -270,8 +270,8 @@ def index():
     return render_template('index.html',
                          apps_by_category=apps_by_category,
                          stats=stats,
-                         portal_name=config.get('portal_name', 'Consulting Tools Portal'),
-                         portal_description=config.get('portal_description', '咨询事务所内部自动化工具统一入口'))
+                         portal_name=config.get('portal_name', 'Portal de Herramientas de Consultoría'),
+                         portal_description=config.get('portal_description', 'Portal de acceso unificado para herramientas de automatización interna'))
 
 
 @app.route('/go/<app_id>')
@@ -288,7 +288,7 @@ def go_to_app(app_id):
             break
 
     if not target_app:
-        return render_template('error.html', message='APP not found'), 404
+        return render_template('error.html', message='Aplicación no encontrada'), 404
 
     # 记录访问
     record_app_visit(app_id)
@@ -323,7 +323,7 @@ def api_app_stats(app_id):
     ''', (app_id,)).fetchone()
 
     if not stats:
-        return jsonify({'error': 'No stats found'}), 404
+        return jsonify({'error': 'No se encontraron estadísticas'}), 404
 
     # 最近访问记录
     recent_visits = db.execute('''
@@ -353,17 +353,17 @@ def health_check():
 
 
 # ============================================================
-# 错误处理
+# Manejo de errores
 # ============================================================
 
 @app.errorhandler(404)
 def not_found(e):
-    return render_template('error.html', message='Page not found'), 404
+    return render_template('error.html', message='Página no encontrada'), 404
 
 
 @app.errorhandler(500)
 def server_error(e):
-    return render_template('error.html', message='Internal server error'), 500
+    return render_template('error.html', message='Error interno del servidor'), 500
 
 
 # ============================================================

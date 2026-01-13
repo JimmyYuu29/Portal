@@ -1,5 +1,5 @@
 <!DOCTYPE html>
-<html lang="zh-CN">
+<html lang="es">
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
@@ -8,7 +8,7 @@
     <script src="https://unpkg.com/lucide@latest"></script>
 </head>
 <body>
-    <!-- 顶部导航栏 -->
+    <!-- Barra de navegación superior -->
     <header class="header">
         <div class="header-content">
             <div class="logo">
@@ -20,11 +20,11 @@
     </header>
 
     <main class="main-content">
-        <!-- 统计卡片区域 -->
+        <!-- Área de tarjetas de estadísticas -->
         <section class="stats-section">
             <h2 class="section-title">
                 <i data-lucide="bar-chart-3"></i>
-                访问统计 / Statistics
+                Estadísticas de Visitas
             </h2>
             <div class="stats-grid">
                 <div class="stat-card">
@@ -33,7 +33,7 @@
                     </div>
                     <div class="stat-info">
                         <span class="stat-value" id="today-pv">{{ stats.today.page_views }}</span>
-                        <span class="stat-label">今日访问 / Today PV</span>
+                        <span class="stat-label">Visitas de Hoy</span>
                     </div>
                 </div>
                 <div class="stat-card">
@@ -42,7 +42,7 @@
                     </div>
                     <div class="stat-info">
                         <span class="stat-value" id="today-uv">{{ stats.today.unique_visitors }}</span>
-                        <span class="stat-label">今日访客 / Today UV</span>
+                        <span class="stat-label">Visitantes de Hoy</span>
                     </div>
                 </div>
                 <div class="stat-card">
@@ -51,7 +51,7 @@
                     </div>
                     <div class="stat-info">
                         <span class="stat-value" id="total-pv">{{ stats.total.page_views }}</span>
-                        <span class="stat-label">总访问量 / Total PV</span>
+                        <span class="stat-label">Visitas Totales</span>
                     </div>
                 </div>
                 <div class="stat-card">
@@ -60,24 +60,24 @@
                     </div>
                     <div class="stat-info">
                         <span class="stat-value" id="total-uv">{{ stats.total.unique_visitors }}</span>
-                        <span class="stat-label">总访客数 / Total UV</span>
+                        <span class="stat-label">Visitantes Totales</span>
                     </div>
                 </div>
             </div>
 
-            <!-- 热门APP统计 -->
+            <!-- Estadísticas de aplicaciones populares -->
             {% if stats.top_apps %}
             <div class="top-apps-section">
                 <h3 class="subsection-title">
                     <i data-lucide="flame"></i>
-                    热门工具 / Popular Tools
+                    Herramientas Populares
                 </h3>
                 <div class="top-apps-list">
                     {% for app_stat in stats.top_apps[:5] %}
                     <div class="top-app-item">
                         <span class="rank">{{ loop.index }}</span>
                         <span class="app-name">{{ app_stat.app_id }}</span>
-                        <span class="visit-count">{{ app_stat.total_visits }} 次访问</span>
+                        <span class="visit-count">{{ app_stat.total_visits }} visitas</span>
                     </div>
                     {% endfor %}
                 </div>
@@ -85,11 +85,11 @@
             {% endif %}
         </section>
 
-        <!-- APP列表区域 -->
+        <!-- Área de lista de aplicaciones -->
         <section class="apps-section">
             <h2 class="section-title">
                 <i data-lucide="grid-3x3"></i>
-                工具列表 / Tools
+                Lista de Herramientas
             </h2>
 
             {% for cat_id, category in apps_by_category.items() %}
@@ -130,31 +130,31 @@
             {% if not apps_by_category %}
             <div class="empty-state">
                 <i data-lucide="inbox"></i>
-                <p>暂无可用工具 / No tools available</p>
-                <span>请联系管理员添加工具 / Please contact admin to add tools</span>
+                <p>No hay herramientas disponibles</p>
+                <span>Por favor, contacte al administrador para añadir herramientas</span>
             </div>
             {% endif %}
         </section>
     </main>
 
-    <!-- 页脚 -->
+    <!-- Pie de página -->
     <footer class="footer">
         <div class="footer-content">
             <p>
                 <i data-lucide="shield-check"></i>
-                Internal Automation Tool Portal | Based on Standard v3.1
+                Portal de Herramientas de Automatización Interna | Basado en Standard v3.1
             </p>
             <p class="footer-note">
-                Consulting Technology Team
+                Equipo de Tecnología de Consultoría
             </p>
         </div>
     </footer>
 
     <script>
-        // 初始化Lucide图标
+        // Inicializar iconos Lucide
         lucide.createIcons();
 
-        // 自动刷新统计数据（每60秒）
+        // Actualizar estadísticas automáticamente (cada 60 segundos)
         setInterval(function() {
             fetch('/api/stats')
                 .then(response => response.json())

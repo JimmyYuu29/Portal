@@ -1,9 +1,9 @@
 <!DOCTYPE html>
-<html lang="zh-CN">
+<html lang="es">
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Error - Consulting Tools Portal</title>
+    <title>Error - Portal de Herramientas de Consultoría</title>
     <link rel="stylesheet" href="{{ url_for('static', filename='css/style.css') }}">
     <script src="https://unpkg.com/lucide@latest"></script>
 </head>
@@ -11,11 +11,11 @@
     <div class="error-page">
         <div class="error-content">
             <i data-lucide="alert-triangle" class="error-icon"></i>
-            <h1>出错了 / Error</h1>
+            <h1>Error</h1>
             <p class="error-message">{{ message }}</p>
             <a href="{{ url_for('index') }}" class="back-link">
                 <i data-lucide="arrow-left"></i>
-                返回首页 / Back to Home
+                Volver al Inicio
             </a>
         </div>
     </div>

@@ -1,21 +1,21 @@
 {
-  "portal_name": "InformePT Portal",
-  "portal_description": "InformePT应用统一入口 | Unified Access Portal for InformePT",
+  "portal_name": "Portal InformePT",
+  "portal_description": "Portal de Acceso Unificado para InformePT",
   "server_ip": "80.225.186.223",
   "categories": [
     {
       "id": "informept",
-      "name": "InformePT应用 / InformePT Apps",
+      "name": "Aplicaciones InformePT",
       "icon": "layout-dashboard",
-      "description": "InformePT报告生成应用的不同版本"
+      "description": "Diferentes versiones de la aplicación de generación de informes InformePT"
     }
   ],
   "apps": [
     {
       "id": "informept-streamlit",
-      "name": "InformePT Streamlit版",
+      "name": "InformePT Streamlit",
       "name_en": "InformePT Streamlit",
-      "description": "交互式Web应用，提供可视化界面和实时数据分析功能。适合数据探索和演示。",
+      "description": "Aplicación web interactiva con interfaz visual y análisis de datos en tiempo real. Ideal para exploración de datos y presentaciones.",
       "category": "informept",
       "url": "/app/",
       "icon": "bar-chart-2",
@@ -27,9 +27,9 @@
     },
     {
       "id": "informept-api",
-      "name": "InformePT API版",
+      "name": "InformePT API",
       "name_en": "InformePT API",
-      "description": "RESTful API接口，提供高性能的程序化访问。适合系统集成和自动化调用。",
+      "description": "Interfaz API RESTful con acceso programático de alto rendimiento. Ideal para integración de sistemas y automatización.",
       "category": "informept",
       "url": "/api/docs",
       "icon": "zap",

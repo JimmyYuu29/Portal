@@ -293,8 +293,25 @@ def go_to_app(app_id):
     # 记录访问
     record_app_visit(app_id)
 
+    # 构建重定向URL
+    target_url = target_app['url']
+
+    # 如果是相对路径（如 /app/），需要构建完整URL以支持直接访问Flask Portal的情况
+    # 检查请求是否来自非标准端口（如直接访问5000端口）
+    if target_url.startswith('/') and not target_url.startswith('//'):
+        # 获取服务器配置
+        server_ip = config.get('server_ip', '')
+        target_port = target_app.get('port')
+
+        # 如果请求不是通过标准HTTP端口（80/443），则使用内部端口直接访问
+        request_port = request.host.split(':')[-1] if ':' in request.host else '80'
+
+        if request_port not in ['80', '443'] and target_port and server_ip:
+            # 直接访问Flask Portal的情况，构建完整URL指向目标服务端口
+            target_url = f'http://{server_ip}:{target_port}/'
+
     # 跳转到APP
-    return redirect(target_app['url'])
+    return redirect(target_url)
 
 
 @app.route('/api/stats')

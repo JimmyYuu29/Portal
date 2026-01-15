@@ -94,15 +94,41 @@ app.teardown_appcontext(close_db)
 
 
 # ============================================================
+# 应用初始化 - 确保数据目录和数据库在应用启动时就绑定
+# ============================================================
+
+def ensure_data_directory():
+    """确保数据目录存在"""
+    data_dir = os.path.dirname(app.config['DATABASE'])
+    os.makedirs(data_dir, exist_ok=True)
+
+
+def initialize_app():
+    """应用初始化 - 创建必要的目录和数据库表"""
+    ensure_data_directory()
+    with app.app_context():
+        init_db()
+
+
+# 在模块加载时执行初始化
+ensure_data_directory()
+with app.app_context():
+    init_db()
+
+
+# ============================================================
 # APP配置管理
 # ============================================================
 
 def load_apps_config():
     """加载APP配置文件"""
     config_path = app.config['APPS_CONFIG']
-    if os.path.exists(config_path):
-        with open(config_path, 'r', encoding='utf-8') as f:
-            return json.load(f)
+    try:
+        if os.path.exists(config_path):
+            with open(config_path, 'r', encoding='utf-8') as f:
+                return json.load(f)
+    except (json.JSONDecodeError, IOError) as e:
+        app.logger.error(f"Error loading apps config: {e}")
     return {"apps": [], "categories": []}
 
 
@@ -153,30 +179,33 @@ def get_apps_by_category():
 
 def record_portal_visit():
     """记录Portal访问"""
-    db = get_db()
-    today = datetime.now().date()
-    ip = request.remote_addr
-
-    # 更新PV
-    db.execute('''
-        INSERT INTO portal_stats (date, page_views, unique_visitors)
-        VALUES (?, 1, 0)
-        ON CONFLICT(date) DO UPDATE SET page_views = page_views + 1
-    ''', (today,))
-
-    # 尝试记录UV（如果是新访客）
     try:
-        db.execute('''
-            INSERT INTO daily_visitors (date, ip_address) VALUES (?, ?)
-        ''', (today, ip))
-        # 新访客，更新UV
-        db.execute('''
-            UPDATE portal_stats SET unique_visitors = unique_visitors + 1 WHERE date = ?
-        ''', (today,))
-    except sqlite3.IntegrityError:
-        pass  # 已经记录过
+        db = get_db()
+        today = datetime.now().date()
+        ip = request.remote_addr
 
-    db.commit()
+        # 更新PV
+        db.execute('''
+            INSERT INTO portal_stats (date, page_views, unique_visitors)
+            VALUES (?, 1, 0)
+            ON CONFLICT(date) DO UPDATE SET page_views = page_views + 1
+        ''', (today,))
+
+        # 尝试记录UV（如果是新访客）
+        try:
+            db.execute('''
+                INSERT INTO daily_visitors (date, ip_address) VALUES (?, ?)
+            ''', (today, ip))
+            # 新访客，更新UV
+            db.execute('''
+                UPDATE portal_stats SET unique_visitors = unique_visitors + 1 WHERE date = ?
+            ''', (today,))
+        except sqlite3.IntegrityError:
+            pass  # 已经记录过
+
+        db.commit()
+    except Exception as e:
+        app.logger.error(f"Error recording portal visit: {e}")
 
 
 def record_app_visit(app_id):
@@ -204,50 +233,61 @@ def record_app_visit(app_id):
 
 def get_dashboard_stats():
     """获取仪表板统计数据"""
-    db = get_db()
-    today = datetime.now().date()
-
-    # 今日统计
-    today_stats = db.execute('''
-        SELECT COALESCE(page_views, 0) as pv, COALESCE(unique_visitors, 0) as uv
-        FROM portal_stats WHERE date = ?
-    ''', (today,)).fetchone()
-
-    # 总访问量
-    total_stats = db.execute('''
-        SELECT COALESCE(SUM(page_views), 0) as total_pv, COALESCE(SUM(unique_visitors), 0) as total_uv
-        FROM portal_stats
-    ''').fetchone()
-
-    # APP访问统计
-    app_stats = db.execute('''
-        SELECT app_id, total_visits, last_visit
-        FROM app_stats
-        ORDER BY total_visits DESC
-        LIMIT 10
-    ''').fetchall()
-
-    # 最近7天趋势
-    week_ago = today - timedelta(days=7)
-    weekly_trend = db.execute('''
-        SELECT date, page_views, unique_visitors
-        FROM portal_stats
-        WHERE date >= ?
-        ORDER BY date
-    ''', (week_ago,)).fetchall()
-
-    return {
-        'today': {
-            'page_views': today_stats['pv'] if today_stats else 0,
-            'unique_visitors': today_stats['uv'] if today_stats else 0
-        },
-        'total': {
-            'page_views': total_stats['total_pv'] if total_stats else 0,
-            'unique_visitors': total_stats['total_uv'] if total_stats else 0
-        },
-        'top_apps': [dict(row) for row in app_stats],
-        'weekly_trend': [dict(row) for row in weekly_trend]
+    default_stats = {
+        'today': {'page_views': 0, 'unique_visitors': 0},
+        'total': {'page_views': 0, 'unique_visitors': 0},
+        'top_apps': [],
+        'weekly_trend': []
     }
+
+    try:
+        db = get_db()
+        today = datetime.now().date()
+
+        # 今日统计
+        today_stats = db.execute('''
+            SELECT COALESCE(page_views, 0) as pv, COALESCE(unique_visitors, 0) as uv
+            FROM portal_stats WHERE date = ?
+        ''', (today,)).fetchone()
+
+        # 总访问量
+        total_stats = db.execute('''
+            SELECT COALESCE(SUM(page_views), 0) as total_pv, COALESCE(SUM(unique_visitors), 0) as total_uv
+            FROM portal_stats
+        ''').fetchone()
+
+        # APP访问统计
+        app_stats = db.execute('''
+            SELECT app_id, total_visits, last_visit
+            FROM app_stats
+            ORDER BY total_visits DESC
+            LIMIT 10
+        ''').fetchall()
+
+        # 最近7天趋势
+        week_ago = today - timedelta(days=7)
+        weekly_trend = db.execute('''
+            SELECT date, page_views, unique_visitors
+            FROM portal_stats
+            WHERE date >= ?
+            ORDER BY date
+        ''', (week_ago,)).fetchall()
+
+        return {
+            'today': {
+                'page_views': today_stats['pv'] if today_stats else 0,
+                'unique_visitors': today_stats['uv'] if today_stats else 0
+            },
+            'total': {
+                'page_views': total_stats['total_pv'] if total_stats else 0,
+                'unique_visitors': total_stats['total_uv'] if total_stats else 0
+            },
+            'top_apps': [dict(row) for row in app_stats],
+            'weekly_trend': [dict(row) for row in weekly_trend]
+        }
+    except Exception as e:
+        app.logger.error(f"Error getting dashboard stats: {e}")
+        return default_stats
 
 
 # ============================================================
@@ -258,11 +298,6 @@ def get_dashboard_stats():
 def index():
     """Portal首页"""
     record_portal_visit()
-
-    # 初始化数据库（如果需要）
-    with app.app_context():
-        init_db()
-
     apps_by_category = get_apps_by_category()
     stats = get_dashboard_stats()
     config = load_apps_config()
@@ -388,13 +423,7 @@ def server_error(e):
 # ============================================================
 
 if __name__ == '__main__':
-    # 确保数据目录存在
-    os.makedirs(os.path.join(os.path.dirname(__file__), 'data'), exist_ok=True)
-
-    # 初始化数据库
-    with app.app_context():
-        init_db()
-
+    # 数据目录和数据库已在模块加载时初始化
     # 启动应用
     app.run(
         host=os.environ.get('PORTAL_HOST', '0.0.0.0'),

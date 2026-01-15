@@ -1,13 +1,37 @@
 {
-  "portal_name": "Portal InformePT",
-  "portal_description": "Portal de Acceso Unificado para InformePT",
+  "portal_name": "Forvis Mazars",
+  "portal_description": "Portal de Acceso Unificado para las herramientas de automatizacion",
   "server_ip": "80.225.186.223",
   "categories": [
     {
-      "id": "informept",
-      "name": "Aplicaciones InformePT",
-      "icon": "layout-dashboard",
-      "description": "Diferentes versiones de la aplicación de generación de informes InformePT"
+      "id": "precio-transferencia",
+      "name": "Precio de transferencia",
+      "icon": "calculator",
+      "description": "Herramientas de automatizacion para el area de Precio de Transferencia"
+    },
+    {
+      "id": "auditoria",
+      "name": "Auditoria",
+      "icon": "clipboard-check",
+      "description": "Herramientas de automatizacion para el area de Auditoria"
+    },
+    {
+      "id": "administracion",
+      "name": "Administracion",
+      "icon": "building-2",
+      "description": "Herramientas de automatizacion para el area de Administracion"
+    },
+    {
+      "id": "general",
+      "name": "General",
+      "icon": "briefcase",
+      "description": "Herramientas de uso general para toda la organizacion"
+    },
+    {
+      "id": "otros",
+      "name": "Otros",
+      "icon": "folder",
+      "description": "Otras herramientas y utilidades"
     }
   ],
   "apps": [
@@ -15,8 +39,8 @@
       "id": "informept-streamlit",
       "name": "InformePT Streamlit",
       "name_en": "InformePT Streamlit",
-      "description": "Aplicación web interactiva con interfaz visual y análisis de datos en tiempo real. Ideal para exploración de datos y presentaciones.",
-      "category": "informept",
+      "description": "Aplicacion web interactiva con interfaz visual y analisis de datos en tiempo real. Ideal para exploracion de datos y presentaciones.",
+      "category": "precio-transferencia",
       "url": "/app/",
       "icon": "bar-chart-2",
       "enabled": true,
@@ -29,8 +53,8 @@
       "id": "informept-api",
       "name": "InformePT API",
       "name_en": "InformePT API",
-      "description": "Interfaz API RESTful con acceso programático de alto rendimiento. Ideal para integración de sistemas y automatización.",
-      "category": "informept",
+      "description": "Interfaz API RESTful con acceso programatico de alto rendimiento. Ideal para integracion de sistemas y automatizacion.",
+      "category": "precio-transferencia",
       "url": "/api/docs",
       "icon": "zap",
       "enabled": true,

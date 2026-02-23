@@ -1,155 +1,190 @@
-# InformePT Portal 快速部署指南
+# Portal Forvis Mazars - Guía de Inicio Rápido
 
-5分钟快速部署Portal到Ubuntu服务器。
-
----
-
-## 服务器信息
-
-| 项目 | 值 |
-|------|-----|
-| **服务器IP** | 80.225.186.223 |
-| **InformePT位置** | /home/ubuntu/InformePT |
-| **Portal位置** | /home/ubuntu/Portal |
-| **Streamlit端口** | 8501 |
-| **API端口** | 8000 |
+Despliegue del Portal en menos de 10 minutos.
 
 ---
 
-## 快速部署（5分钟）
+## Información del Servidor
 
-### 步骤1：连接服务器
+| Ítem | Valor |
+|------|-------|
+| **IP Servidor** | 80.225.186.223 |
+| **Portal** | /home/rootadmin/Portal |
+| **DATA_DIR** | /home/rootadmin/data/portal |
+| **Puerto Portal** | 5000 (Flask/gunicorn) |
+| **Puerto Streamlit** | 8501 |
+| **Puerto API** | 8000 |
+
+---
+
+## Despliegue Rápido
+
+### Paso 1: Conectar al servidor
 
 ```bash
-ssh ubuntu@80.225.186.223
+ssh rootadmin@80.225.186.223
 ```
 
-### 步骤2：克隆仓库
+### Paso 2: Clonar el repositorio
 
 ```bash
-cd /home/ubuntu
+cd /home/rootadmin
 git clone https://github.com/JimmyYuu29/Portal.git
 ```
 
-### 步骤3：运行自动部署
+### Paso 3: Ejecutar el script de despliegue
 
 ```bash
-cd /home/ubuntu/Portal/scripts
-chmod +x deploy.sh
+cd /home/rootadmin/Portal/scripts
+chmod +x deploy.sh sync-portal-data.sh
 ./deploy.sh
 ```
 
-**完成！** 脚本会自动完成所有配置。
+El script automáticamente:
+1. Instala dependencias del sistema
+2. Crea virtual environment Python
+3. Instala paquetes Python (Flask, Flask-Login, Flask-WTF, etc.)
+4. Ejecuta `sync-portal-data.sh` (crea DATA_DIR + symlinks)
+5. Configura Nginx (proxy / → Flask:5000)
+6. Instala el servicio systemd `portal.service`
+7. Arranca todos los servicios
 
----
-
-## 访问地址
-
-部署完成后，通过以下地址访问：
-
-| 服务 | URL |
-|------|-----|
-| **Portal主页** | http://80.225.186.223/ |
-| **Streamlit版本** | http://80.225.186.223/app/ |
-| **API版本** | http://80.225.186.223/api/ |
-| **API文档** | http://80.225.186.223/api/docs |
-| **健康检查** | http://80.225.186.223/health |
-
----
-
-## 管理命令
-
-### 检查服务状态
+### Paso 4: Configurar secretos (IMPORTANTE)
 
 ```bash
-cd /home/ubuntu/Portal/scripts
-./check-status.sh
+# Editar los secretos del servicio
+sudo systemctl edit portal.service
 ```
 
-### 重启所有服务
-
-```bash
-cd /home/ubuntu/Portal/scripts
-./restart-all.sh
+Agregar:
+```ini
+[Service]
+Environment="SECRET_KEY=tu-clave-secreta-larga-aleatoria"
+Environment="POWER_AUTOMATE_URL=https://prod-XX.logic.azure.com/workflows/..."
+Environment="POWER_AUTOMATE_SHARED_SECRET=tu-secreto-compartido"
 ```
 
-或手动重启：
-
+Luego:
 ```bash
 sudo systemctl daemon-reload
-sudo systemctl restart informept-api.service
-sudo systemctl restart streamlit-informept.service
+sudo systemctl restart portal.service
 ```
 
-### 备份配置
+### Paso 5: Iniciar sesión como Admin
 
-```bash
-cd /home/ubuntu/Portal/scripts
-./backup.sh
-```
+1. Abrir: http://80.225.186.223/login
+2. **Username**: `Admin`
+3. **Password**: `Admin123`
+4. ⚠️ Cambiar la contraseña inmediatamente desde el dashboard
 
 ---
 
-## 查看日志
+## Inicialización de Datos (Automática)
+
+Al primer arranque, el Portal:
+- Crea `DATA_DIR` si no existe
+- Inicializa `users.db` con el usuario Admin
+- Copia `apps_config.json` a DATA_DIR (si no existe)
+- Crea symlinks desde el repo a DATA_DIR
+
+---
+
+## URLs de Acceso
+
+| Servicio | URL |
+|----------|-----|
+| **Login** | http://80.225.186.223/login |
+| **Dashboard** | http://80.225.186.223/dashboard |
+| **Admin Panel** | http://80.225.186.223/admin |
+| **Streamlit** | http://80.225.186.223/app/ |
+| **API** | http://80.225.186.223/api/ |
+| **API Docs** | http://80.225.186.223/api/docs |
+| **Health** | http://80.225.186.223/health |
+
+---
+
+## Comandos de Gestión
+
+### Verificar estado
 
 ```bash
-# Nginx访问日志
-sudo tail -f /var/log/nginx/portal_access.log
+cd /home/rootadmin/Portal
+./scripts/check-status.sh
+```
 
-# Nginx错误日志
+### Reiniciar servicios
+
+```bash
+./scripts/restart-all.sh
+```
+
+Esto ejecuta automáticamente `sync-portal-data.sh` antes de reiniciar.
+
+### Actualizar Portal
+
+```bash
+cd /home/rootadmin/Portal
+git pull origin main
+./scripts/restart-all.sh
+```
+
+> DATA_DIR no se sobrescribe por git pull.
+
+---
+
+## Ver Logs
+
+```bash
+# Portal Flask
+sudo journalctl -u portal.service -f
+
+# Nginx
+sudo tail -f /var/log/nginx/portal_access.log
 sudo tail -f /var/log/nginx/portal_error.log
 
-# API服务日志
+# API
 sudo journalctl -u informept-api.service -f
 
-# Streamlit服务日志
+# Streamlit
 sudo journalctl -u streamlit-informept.service -f
 ```
 
 ---
 
-## 快速故障排查
+## Solución Rápida de Problemas
 
-### 无法访问Portal
+### No se puede acceder al Portal
 
 ```bash
+sudo systemctl status portal.service
 sudo systemctl status nginx
 sudo nginx -t
+sudo systemctl restart portal.service
 sudo systemctl restart nginx
 ```
 
-### 应用无响应
+### Login no funciona
 
 ```bash
-sudo systemctl status informept-api.service
-sudo systemctl status streamlit-informept.service
-sudo systemctl restart informept-api.service
-sudo systemctl restart streamlit-informept.service
+# Verificar que portal.service está corriendo
+sudo journalctl -u portal.service -n 30
+
+# Verificar que DATA_DIR existe y tiene permisos
+ls -la /home/rootadmin/data/portal/
 ```
 
 ---
 
-## 更新Portal
+## Documentos Relacionados
 
-```bash
-cd /home/ubuntu/Portal
-git pull origin main
-./scripts/restart-all.sh
-```
-
----
-
-## 相关文档
-
-- **详细部署指南**: [DEPLOYMENT_GUIDE.md](DEPLOYMENT_GUIDE.md)
-- **项目说明**: [README.md](README.md)
-- **架构标准**: [Standard_v3.1_EN.md](Standard_v3.1_EN.md)
+- **Guía de despliegue completa**: [DEPLOYMENT_GUIDE.md](DEPLOYMENT_GUIDE.md)
+- **README principal**: [README.md](README.md)
+- **Configuración de apps**: [GUIA_CONFIGURACION.md](GUIA_CONFIGURACION.md)
+- **Guía Power Automate**: [docs/POWER_AUTOMATE_EMAIL_SETUP.md](docs/POWER_AUTOMATE_EMAIL_SETUP.md)
+- **Estándar arquitectónico**: [Standard_v3.1_EN.md](Standard_v3.1_EN.md)
 
 ---
 
-**部署时间**: < 5分钟
-**难度**: 简单
-
----
-
-**最后更新**: 2026-01-13
+**Tiempo estimado**: < 10 minutos
+**Dificultad**: Sencillo
+**Última actualización**: 2025-02-23

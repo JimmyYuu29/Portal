@@ -1,234 +1,257 @@
-# InformePT Portal
+# Portal Forvis Mazars
 
-InformePT应用统一访问入口 | Unified Access Portal for InformePT Application
-
----
-
-## 概述 / Overview
-
-Portal是InformePT应用的统一访问入口，通过Nginx反向代理将外部请求路由到内部的Streamlit版本（端口8501）和API版本（端口8000）。
-
-Portal provides a unified access point for InformePT application, routing external requests via Nginx reverse proxy to the internal Streamlit version (port 8501) and API version (port 8000).
+Portal de Acceso Unificado para Herramientas de Automatización | Unified Automation Tools Portal
 
 ---
 
-## 服务器信息 / Server Information
+## Funcionalidades / Features (v2.0.0)
 
-| 项目 | 值 |
-|------|-----|
-| **服务器IP** | 80.225.186.223 |
-| **InformePT应用目录** | /home/ubuntu/InformePT |
-| **Portal目录** | /home/ubuntu/Portal |
-| **Streamlit服务** | streamlit-informept.service (端口 8501) |
-| **API服务** | informept-api.service (端口 8000) |
+| Funcionalidad | Descripción |
+|---------------|-------------|
+| **Login / Registro** | Autenticación con cuenta corporativa, departamento y rol |
+| **RBAC** | Control de acceso por departamento y rol (apps filtradas) |
+| **Panel de Admin** | Gestión de usuarios (buscar, editar, habilitar/deshabilitar, reset password) |
+| **Olvidar Contraseña** | Envío de email vía Power Automate con token de un solo uso (30 min) |
+| **Cambiar Contraseña** | Cambio de contraseña desde el dashboard (requiere contraseña actual) |
+| **Estadísticas** | Seguimiento de visitas por app (SQLite), visitantes únicos diarios |
+| **Apps Redirect** | `/go/<app_id>` con verificación RBAC + registro de acceso |
+| **Persistencia Externa** | DATA_DIR para datos fuera del repo (sobrevive git pull) |
+
+### Cuenta de Administrador por Defecto
+
+| Campo | Valor |
+|-------|-------|
+| **Username** | `Admin` |
+| **Password** | `Admin123` |
+
+⚠️ **Cambiar la contraseña del Admin en producción inmediatamente.**
 
 ---
 
-## 访问地址 / Access URLs
+## Arquitectura / Architecture
 
-| 服务 | URL | 说明 |
-|------|-----|------|
-| **Portal主页** | http://80.225.186.223/ | 统一入口页面 |
-| **Streamlit版本** | http://80.225.186.223/app/ | 交互式Web应用 |
-| **API版本** | http://80.225.186.223/api/ | RESTful API接口 |
-| **API文档** | http://80.225.186.223/api/docs | FastAPI自动生成的文档 |
-| **健康检查** | http://80.225.186.223/health | 系统状态检查 |
-
----
-
-## 快速开始 / Quick Start
-
-### 1. 连接服务器
-
-```bash
-ssh ubuntu@80.225.186.223
+```
+Internet (usuario)
+        ↓
+80.225.186.223:80 (Nginx Reverse Proxy)
+        ├── /             → Flask Portal (127.0.0.1:5000) — Login, Dashboard, /go/<id>
+        ├── /app/         → Streamlit (127.0.0.1:8501)
+        ├── /api/         → FastAPI (127.0.0.1:8000)
+        └── /health       → Flask Portal health check
 ```
 
-### 2. 克隆Portal仓库
+### Persistencia de Datos
+
+```
+DATA_DIR = /home/rootadmin/data/portal/
+├── users.db           # Base de datos SQLite (usuarios, tokens, logs)
+└── apps_config.json   # Configuración de apps (source of truth)
+
+Repo (symlinks):
+  portal/apps_config.json  →  DATA_DIR/apps_config.json
+```
+
+---
+
+## Variables de Entorno / Environment Variables
+
+| Variable | Descripción | Ejemplo |
+|----------|-------------|---------|
+| `SECRET_KEY` | Clave secreta Flask (obligatoria en producción) | `cambiar-a-cadena-larga-aleatoria` |
+| `DATA_DIR` | Directorio de datos persistentes | `/home/rootadmin/data/portal` |
+| `PORTAL_DOMAIN` | Dominio para enlaces de reset | `http://80.225.186.223` |
+| `POWER_AUTOMATE_URL` | URL del Flow HTTP Trigger | `https://prod-XX.logic.azure.com/...` |
+| `POWER_AUTOMATE_SHARED_SECRET` | Secreto compartido para autenticación | `mi-secreto-largo` |
+| `POWER_AUTOMATE_TIMEOUT_SECONDS` | Timeout HTTP (default: 10) | `10` |
+| `POWER_AUTOMATE_RETRIES` | Reintentos (default: 3) | `3` |
+| `PORTAL_HTTPS` | Activar cookie Secure (si HTTPS) | `true` |
+
+---
+
+## Información del Servidor / Server Information
+
+| Ítem | Valor |
+|------|-------|
+| **IP Servidor** | 80.225.186.223 |
+| **Directorio Portal** | /home/rootadmin/Portal |
+| **DATA_DIR** | /home/rootadmin/data/portal |
+| **Puerto Portal Flask** | 5000 |
+| **Puerto Streamlit** | 8501 |
+| **Puerto API** | 8000 |
+
+---
+
+## URLs de Acceso / Access URLs
+
+| Servicio | URL | Descripción |
+|----------|-----|-------------|
+| **Login** | http://80.225.186.223/login | Página de inicio de sesión |
+| **Dashboard** | http://80.225.186.223/dashboard | Dashboard con apps filtradas |
+| **Streamlit** | http://80.225.186.223/app/ | Aplicación Streamlit |
+| **API** | http://80.225.186.223/api/ | API REST |
+| **API Docs** | http://80.225.186.223/api/docs | Documentación FastAPI |
+| **Health** | http://80.225.186.223/health | Health check |
+
+---
+
+## Inicio Rápido / Quick Start
+
+### 1. Conectar al servidor
 
 ```bash
-cd /home/ubuntu
+ssh rootadmin@80.225.186.223
+```
+
+### 2. Clonar repositorio
+
+```bash
+cd /home/rootadmin
 git clone https://github.com/JimmyYuu29/Portal.git
 ```
 
-### 3. 运行自动部署（推荐）
+### 3. Despliegue automático
 
 ```bash
-cd /home/ubuntu/Portal/scripts
+cd /home/rootadmin/Portal/scripts
 chmod +x deploy.sh
 ./deploy.sh
 ```
 
-详细部署步骤请查看：[DEPLOYMENT_GUIDE.md](DEPLOYMENT_GUIDE.md)
+Guía detallada: [DEPLOYMENT_GUIDE.md](DEPLOYMENT_GUIDE.md)
 
 ---
 
-## 目录结构 / Directory Structure
+## Estructura de Directorios / Directory Structure
 
 ```
 Portal/
-├── README.md                    # 项目说明（本文件）
-├── DEPLOYMENT_GUIDE.md          # 详细部署指南
-├── QUICK_START.md               # 快速开始指南
-├── Standard_v3.1_EN.md          # 架构标准文档
+├── README.md                         # Este archivo
+├── DEPLOYMENT_GUIDE.md               # Guía de despliegue completa
+├── QUICK_START.md                    # Inicio rápido
+├── GUIA_CONFIGURACION.md            # Configuración de apps
+├── HOW_TO_ADD_APP.md                # Cómo agregar aplicaciones
+├── Standard_v3.1_EN.md              # Estándar arquitectónico
+├── Mejora Portal.md                  # Notas de mejora
+├── portal.service                    # Unit file de systemd
 │
-├── portal/                      # Portal Flask应用（可选高级功能）
-│   ├── app.py                  # Flask主应用（统计功能）
-│   ├── apps_config.json        # 应用配置文件
-│   ├── requirements.txt        # Python依赖
-│   ├── data/                   # 数据目录
-│   ├── static/css/             # 样式文件
-│   └── templates/              # HTML模板
+├── portal/                           # Aplicación Flask
+│   ├── app.py                       # Aplicación principal (auth, RBAC, admin)
+│   ├── models.py                    # Modelos de base de datos
+│   ├── power_automate_client.py     # Cliente Power Automate (emails)
+│   ├── apps_config.json             # Config de apps (symlink → DATA_DIR)
+│   ├── requirements.txt             # Dependencias Python
+│   ├── static/css/style.css         # Estilos
+│   └── templates/                   # Plantillas HTML
+│       ├── login.html
+│       ├── register.html
+│       ├── dashboard.html
+│       ├── admin.html
+│       ├── forgot_password.html
+│       ├── reset_password.html
+│       ├── change_password.html
+│       └── error.html
 │
-└── scripts/                     # 管理脚本
-    ├── deploy.sh               # 自动部署脚本
-    ├── check-status.sh         # 状态检查脚本
-    ├── restart-all.sh          # 重启服务脚本
-    └── backup.sh               # 配置备份脚本
+├── scripts/                          # Scripts de gestión
+│   ├── deploy.sh                    # Despliegue automático
+│   ├── sync-portal-data.sh          # Sincronización de datos
+│   ├── check-status.sh              # Verificación de estado
+│   ├── restart-all.sh               # Reinicio de servicios
+│   └── backup.sh                    # Backup de configuración
+│
+├── docs/                             # Documentación adicional
+│   └── POWER_AUTOMATE_EMAIL_SETUP.md # Guía de Power Automate
+│
+└── static/                           # Página estática legacy
+    └── index.html
 ```
 
 ---
 
-## 管理脚本 / Management Scripts
+## Scripts de Gestión / Management Scripts
 
-| 脚本 | 功能 | 使用方法 |
-|------|------|----------|
-| `deploy.sh` | 一键自动部署Portal | `./scripts/deploy.sh` |
-| `check-status.sh` | 检查所有服务状态 | `./scripts/check-status.sh` |
-| `restart-all.sh` | 重启所有服务 | `./scripts/restart-all.sh` |
-| `backup.sh` | 备份配置文件 | `./scripts/backup.sh` |
+| Script | Función | Uso |
+|--------|---------|-----|
+| `deploy.sh` | Despliegue completo | `./scripts/deploy.sh` |
+| `sync-portal-data.sh` | Sincronizar datos DATA_DIR | `./scripts/sync-portal-data.sh` |
+| `check-status.sh` | Ver estado de servicios | `./scripts/check-status.sh` |
+| `restart-all.sh` | Reiniciar todos los servicios | `./scripts/restart-all.sh` |
+| `backup.sh` | Backup de configuración | `./scripts/backup.sh` |
 
 ---
 
-## 常用命令 / Common Commands
+## Comandos Comunes / Common Commands
 
-### 检查服务状态
+### Verificar estado
 
 ```bash
-# 使用脚本
 ./scripts/check-status.sh
 
-# 或手动检查
+# O manualmente:
+sudo systemctl status portal.service
 sudo systemctl status nginx
 sudo systemctl status informept-api.service
 sudo systemctl status streamlit-informept.service
 ```
 
-### 重启服务
+### Reiniciar servicios
 
 ```bash
-# 使用脚本
 ./scripts/restart-all.sh
 
-# 或手动重启
+# O manualmente:
 sudo systemctl daemon-reload
-sudo systemctl restart informept-api.service
-sudo systemctl restart streamlit-informept.service
+sudo systemctl restart portal.service
+sudo systemctl restart nginx
 ```
 
-### 查看日志
+### Ver logs
 
 ```bash
-# Nginx日志
+# Portal Flask
+sudo journalctl -u portal.service -f
+
+# Nginx
 sudo tail -f /var/log/nginx/portal_access.log
 sudo tail -f /var/log/nginx/portal_error.log
 
-# 应用服务日志
+# API / Streamlit
 sudo journalctl -u informept-api.service -f
 sudo journalctl -u streamlit-informept.service -f
 ```
 
 ---
 
-## 架构设计 / Architecture
-
-```
-Internet (用户访问)
-        ↓
-80.225.186.223:80 (Nginx反向代理)
-        ├── /          → Portal主页 (静态HTML)
-        ├── /app/      → 127.0.0.1:8501 (Streamlit)
-        ├── /api/      → 127.0.0.1:8000 (FastAPI)
-        └── /health    → 健康检查
-
-防火墙规则 (UFW):
-    ✓ 允许: 22 (SSH), 80 (HTTP), 443 (HTTPS)
-    ✗ 拒绝: 8000, 8501 (阻止直接访问内部端口)
-```
-
----
-
-## 故障排查 / Troubleshooting
-
-### 无法访问Portal
+## Actualizar Portal / Update Portal
 
 ```bash
-# 1. 检查Nginx状态
-sudo systemctl status nginx
-sudo nginx -t
-
-# 2. 查看错误日志
-sudo tail -50 /var/log/nginx/error.log
-
-# 3. 重启Nginx
-sudo systemctl restart nginx
-```
-
-### 应用无响应
-
-```bash
-# 1. 检查服务状态
-sudo systemctl status informept-api.service
-sudo systemctl status streamlit-informept.service
-
-# 2. 查看服务日志
-sudo journalctl -u informept-api.service -n 50
-sudo journalctl -u streamlit-informept.service -n 50
-
-# 3. 重启服务
-sudo systemctl daemon-reload
-sudo systemctl restart informept-api.service
-sudo systemctl restart streamlit-informept.service
-```
-
-### 502 Bad Gateway
-
-```bash
-# 检查后端服务是否运行
-sudo netstat -tlnp | grep -E ':(8000|8501)'
-
-# 或
-sudo ss -tlnp | grep -E ':(8000|8501)'
-```
-
----
-
-## 更新Portal / Update Portal
-
-```bash
-cd /home/ubuntu/Portal
+cd /home/rootadmin/Portal
 git pull origin main
-./scripts/restart-all.sh
+./scripts/restart-all.sh   # Ejecuta sync-portal-data.sh automáticamente
 ```
 
----
-
-## 相关文档 / Related Documents
-
-- [快速开始指南 (QUICK_START.md)](QUICK_START.md) - 5分钟快速部署
-- [详细部署指南 (DEPLOYMENT_GUIDE.md)](DEPLOYMENT_GUIDE.md) - 完整的从零开始部署步骤
-- [架构标准 (Standard_v3.1_EN.md)](Standard_v3.1_EN.md) - 平台架构设计标准
+> ⚠️ DATA_DIR nunca se sobrescribe por git pull. El sync script crea symlinks.
 
 ---
 
-## 版本信息 / Version
+## Documentos Relacionados / Related Documents
 
-- **Portal Version**: 1.0.0
-- **Last Updated**: 2026-01-13
+- [Inicio rápido (QUICK_START.md)](QUICK_START.md)
+- [Guía de despliegue (DEPLOYMENT_GUIDE.md)](DEPLOYMENT_GUIDE.md)
+- [Configuración del portal (GUIA_CONFIGURACION.md)](GUIA_CONFIGURACION.md)
+- [Cómo agregar apps (HOW_TO_ADD_APP.md)](HOW_TO_ADD_APP.md)
+- [Estándar arquitectónico (Standard_v3.1_EN.md)](Standard_v3.1_EN.md)
+- [Guía Power Automate (docs/POWER_AUTOMATE_EMAIL_SETUP.md)](docs/POWER_AUTOMATE_EMAIL_SETUP.md)
+
+---
+
+## Información de Versión / Version
+
+- **Portal Version**: 2.0.0
+- **Last Updated**: 2025-02-23
 - **Author**: JimmyYuu29
 
 ---
 
-## 许可证 / License
+## Licencia / License
 
 [MIT License](LICENSE)

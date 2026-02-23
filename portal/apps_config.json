@@ -1,31 +1,31 @@
 {
   "portal_name": "Forvis Mazars",
-  "portal_description": "Portal de Acceso Unificado para las herramientas de automatizacion",
+  "portal_description": "Portal de Acceso Unificado para las herramientas de automatización",
   "server_ip": "80.225.186.223",
   "categories": [
     {
       "id": "precio-transferencia",
-      "name": "Precio de transferencia",
+      "name": "Precio de Transferencia",
       "icon": "calculator",
-      "description": "Herramientas de automatizacion para el area de Precio de Transferencia"
+      "description": "Herramientas de automatización para el área de Precio de Transferencia"
     },
     {
       "id": "auditoria",
-      "name": "Auditoria",
+      "name": "Auditoría",
       "icon": "clipboard-check",
-      "description": "Herramientas de automatizacion para el area de Auditoria"
+      "description": "Herramientas de automatización para el área de Auditoría"
     },
     {
       "id": "administracion",
-      "name": "Administracion",
+      "name": "Administración",
       "icon": "building-2",
-      "description": "Herramientas de automatizacion para el area de Administracion"
+      "description": "Herramientas de automatización para el área de Administración"
     },
     {
       "id": "general",
       "name": "General",
       "icon": "briefcase",
-      "description": "Herramientas de uso general para toda la organizacion"
+      "description": "Herramientas de uso general para toda la organización"
     },
     {
       "id": "otros",
@@ -39,29 +39,56 @@
       "id": "informept-streamlit",
       "name": "InformePT Streamlit",
       "name_en": "InformePT Streamlit",
-      "description": "Aplicacion web interactiva con interfaz visual y analisis de datos en tiempo real. Ideal para exploracion de datos y presentaciones.",
+      "description": "Aplicación web interactiva con interfaz visual y análisis de datos en tiempo real. Ideal para exploración de datos y presentaciones.",
       "category": "precio-transferencia",
       "url": "/app/",
       "icon": "bar-chart-2",
       "enabled": true,
       "version": "1.0.0",
       "maintainer": "InformePT Team",
-      "tags": ["streamlit", "web", "interactive", "visualization"],
-      "port": 8501
+      "tags": [
+        "streamlit",
+        "web",
+        "interactive",
+        "visualization"
+      ],
+      "port": 8501,
+      "access": {
+        "departments": [
+          "precio_transferencia"
+        ],
+        "roles": []
+      }
     },
     {
       "id": "informept-api",
       "name": "InformePT API",
       "name_en": "InformePT API",
-      "description": "Interfaz API RESTful con acceso programatico de alto rendimiento. Ideal para integracion de sistemas y automatizacion.",
+      "description": "Interfaz API RESTful con acceso programático de alto rendimiento. Ideal para integración de sistemas y automatización.",
       "category": "precio-transferencia",
       "url": "/api/docs",
       "icon": "zap",
       "enabled": true,
       "version": "1.0.0",
       "maintainer": "InformePT Team",
-      "tags": ["api", "fastapi", "rest", "automation"],
-      "port": 8000
+      "tags": [
+        "api",
+        "fastapi",
+        "rest",
+        "automation"
+      ],
+      "port": 8000,
+      "access": {
+        "departments": [
+          "precio_transferencia",
+          "it"
+        ],
+        "roles": [
+          "senior",
+          "manager",
+          "socio"
+        ]
+      }
     }
   ]
 }

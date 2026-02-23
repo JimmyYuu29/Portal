@@ -1,0 +1,205 @@
+<!DOCTYPE html>
+<html lang="es">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Panel de Administración - Portal Forvis Mazars</title>
+    <meta name="description" content="Panel de administración del Portal Forvis Mazars">
+    <link rel="stylesheet" href="{{ url_for('static', filename='css/style.css') }}">
+    <script src="https://unpkg.com/lucide@latest"></script>
+</head>
+
+<body>
+    <header class="header">
+        <div class="header-content header-flex">
+            <div class="logo">
+                <i data-lucide="settings"></i>
+                <h1>Panel de Administración</h1>
+            </div>
+            <div class="header-actions">
+                <a href="{{ url_for('dashboard') }}" class="header-btn">
+                    <i data-lucide="arrow-left"></i>
+                    Volver al Dashboard
+                </a>
+                <a href="{{ url_for('logout') }}" class="header-btn header-btn-danger">
+                    <i data-lucide="log-out"></i>
+                </a>
+            </div>
+        </div>
+    </header>
+
+    <main class="main-content">
+        {% with messages = get_flashed_messages(with_categories=true) %}
+        {% if messages %}
+        <div class="flash-messages">
+            {% for category, message in messages %}
+            <div class="flash flash-{{ category }}">
+                <span>{{ message }}</span>
+            </div>
+            {% endfor %}
+        </div>
+        {% endif %}
+        {% endwith %}
+
+        <!-- Search -->
+        <section class="admin-section">
+            <h2 class="section-title">
+                <i data-lucide="users"></i>
+                Gestión de Usuarios
+            </h2>
+
+            <form method="GET" class="admin-search-form" id="user-search-form">
+                <div class="search-bar">
+                    <i data-lucide="search"></i>
+                    <input type="text" name="search" placeholder="Buscar usuario..." value="{{ search }}"
+                        id="search-input">
+                    <button type="submit" class="btn btn-primary btn-sm">Buscar</button>
+                    {% if search %}
+                    <a href="{{ url_for('admin_panel') }}" class="btn btn-secondary btn-sm">Limpiar</a>
+                    {% endif %}
+                </div>
+            </form>
+
+            <!-- Users Table -->
+            <div class="admin-table-wrapper">
+                <table class="admin-table" id="users-table">
+                    <thead>
+                        <tr>
+                            <th>ID</th>
+                            <th>Usuario</th>
+                            <th>Rol</th>
+                            <th>Departamento</th>
+                            <th>Estado</th>
+                            <th>Admin</th>
+                            <th>Creado</th>
+                            <th>Acciones</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        {% for u in users %}
+                        <tr class="{% if not u['enabled'] %}row-disabled{% endif %}">
+                            <td>{{ u['id'] }}</td>
+                            <td>
+                                <strong>{{ u['username'] }}</strong>
+                                {% if u['is_admin'] %}
+                                <span class="badge badge-admin">Admin</span>
+                                {% endif %}
+                            </td>
+                            <td>{{ roles.get(u['role'], u['role']) }}</td>
+                            <td>
+                                {{ departments.get(u['department'], u['department']) }}
+                                {% if u['otros_detalle'] %}
+                                <br><small class="text-muted">({{ u['otros_detalle'] }})</small>
+                                {% endif %}
+                            </td>
+                            <td>
+                                {% if u['enabled'] %}
+                                <span class="badge badge-success">Activo</span>
+                                {% else %}
+                                <span class="badge badge-danger">Deshabilitado</span>
+                                {% endif %}
+                            </td>
+                            <td>{{ 'Sí' if u['is_admin'] else 'No' }}</td>
+                            <td><small>{{ u['created_at'][:16] if u['created_at'] else '-' }}</small></td>
+                            <td class="actions-cell">
+                                <button class="btn btn-sm btn-secondary"
+                                    onclick="openEditModal({{ u['id'] }}, '{{ u['username'] }}', '{{ u['role'] }}', '{{ u['department'] }}', '{{ u['otros_detalle'] or '' }}', {{ u['enabled'] }})">
+                                    <i data-lucide="edit-3"></i> Editar
+                                </button>
+                                <form method="POST" action="{{ url_for('admin_reset_user_password', user_id=u['id']) }}"
+                                    style="display:inline;"
+                                    onsubmit="return confirm('¿Generar contraseña temporal para {{ u[\'username\'] }}?');">
+                                    <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+                                    <button type="submit" class="btn btn-sm btn-warning">
+                                        <i data-lucide="key-round"></i> Reset PW
+                                    </button>
+                                </form>
+                            </td>
+                        </tr>
+                        {% endfor %}
+                    </tbody>
+                </table>
+            </div>
+
+            <p class="admin-count">Total: {{ users|length }} usuario(s)</p>
+        </section>
+    </main>
+
+    <!-- Edit Modal -->
+    <div class="modal-overlay" id="edit-modal" style="display:none;">
+        <div class="modal-card">
+            <div class="modal-header">
+                <h3><i data-lucide="edit-3"></i> Editar Usuario: <span id="modal-username"></span></h3>
+                <button class="modal-close" onclick="closeEditModal()">&times;</button>
+            </div>
+            <form method="POST" id="edit-form" class="auth-form">
+                <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+
+                <div class="form-group">
+                    <label for="edit-role"><i data-lucide="briefcase"></i> Rol</label>
+                    <select id="edit-role" name="role">
+                        {% for value, label in role_choices %}
+                        <option value="{{ value }}">{{ label }}</option>
+                        {% endfor %}
+                    </select>
+                </div>
+
+                <div class="form-group">
+                    <label for="edit-department"><i data-lucide="building-2"></i> Departamento</label>
+                    <select id="edit-department" name="department">
+                        {% for value, label in department_choices %}
+                        <option value="{{ value }}">{{ label }}</option>
+                        {% endfor %}
+                    </select>
+                </div>
+
+                <div class="form-group">
+                    <label for="edit-otros"><i data-lucide="edit-3"></i> Detalle Otros</label>
+                    <input type="text" id="edit-otros" name="otros_detalle" placeholder="(si aplica)">
+                </div>
+
+                <div class="form-group">
+                    <label for="edit-enabled"><i data-lucide="toggle-left"></i> Estado</label>
+                    <select id="edit-enabled" name="enabled">
+                        <option value="1">Activo</option>
+                        <option value="0">Deshabilitado</option>
+                    </select>
+                </div>
+
+                <div class="form-actions">
+                    <button type="button" class="btn btn-secondary" onclick="closeEditModal()">Cancelar</button>
+                    <button type="submit" class="btn btn-primary">
+                        <i data-lucide="save"></i> Guardar Cambios
+                    </button>
+                </div>
+            </form>
+        </div>
+    </div>
+
+    <script>
+        lucide.createIcons();
+
+        function openEditModal(id, username, role, department, otros, enabled) {
+            document.getElementById('edit-modal').style.display = 'flex';
+            document.getElementById('modal-username').textContent = username;
+            document.getElementById('edit-form').action = '/admin/user/' + id + '/edit';
+            document.getElementById('edit-role').value = role;
+            document.getElementById('edit-department').value = department;
+            document.getElementById('edit-otros').value = otros;
+            document.getElementById('edit-enabled').value = enabled ? '1' : '0';
+            lucide.createIcons();
+        }
+
+        function closeEditModal() {
+            document.getElementById('edit-modal').style.display = 'none';
+        }
+
+        // close on overlay click
+        document.getElementById('edit-modal').addEventListener('click', function (e) {
+            if (e.target === this) closeEditModal();
+        });
+    </script>
+</body>
+
+</html>

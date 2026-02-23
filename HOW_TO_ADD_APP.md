@@ -1,363 +1,337 @@
-# Portal 添加应用指南
+# Portal - Guía para Agregar Aplicaciones
 
-本文档详细介绍如何向 Portal 添加新的应用程序。
-
----
-
-## 目录
-
-1. [概述](#概述)
-2. [添加应用的步骤](#添加应用的步骤)
-3. [配置文件详解](#配置文件详解)
-4. [添加分类](#添加分类)
-5. [Nginx 配置（可选）](#nginx-配置可选)
-6. [完整示例](#完整示例)
-7. [常见问题](#常见问题)
+Guía detallada sobre cómo agregar nuevas aplicaciones al Portal.
 
 ---
 
-## 概述
+## Índice
 
-Portal 使用 JSON 配置文件来管理应用列表。添加新应用主要涉及修改 `portal/apps_config.json` 文件。
+1. [Visión General](#visión-general)
+2. [Pasos para Agregar una App](#pasos-para-agregar-una-app)
+3. [Campos de Configuración](#campos-de-configuración)
+4. [Configurar Control de Acceso (RBAC)](#configurar-control-de-acceso-rbac)
+5. [Verificar Permisos](#verificar-permisos)
+6. [Agregar Categorías](#agregar-categorías)
+7. [Nginx (Opcional)](#nginx-opcional)
+8. [Ejemplo Completo](#ejemplo-completo)
+9. [FAQ](#faq)
 
-### 架构说明
+---
+
+## Visión General
+
+### Arquitectura
 
 ```
-用户浏览器
-    │
-    ▼
-Portal (Flask 5000端口 或 Nginx 80端口)
-    │
-    ├── /go/<app_id>  →  记录访问统计  →  重定向到应用URL
-    │
-    ▼
-应用服务 (如 Streamlit:8501, FastAPI:8000, 等)
+Usuario → Login → Dashboard (muestra solo apps con permiso)
+                      │
+                      ▼
+               /go/<app_id> → Verificación RBAC → Registro de acceso → Redirect
+                      │
+                      ▼
+               Aplicación (Streamlit:8501, FastAPI:8000, etc.)
 ```
+
+### Archivo de configuración
+
+```
+DATA_DIR/apps_config.json
+```
+
+> `DATA_DIR` es por defecto `/home/rootadmin/data/portal/`
+> El archivo `portal/apps_config.json` en el repo es un symlink a DATA_DIR.
 
 ---
 
-## 添加应用的步骤
+## Pasos para Agregar una App
 
-### 步骤 1：编辑配置文件
-
-打开配置文件：
+### Paso 1: Editar el archivo de configuración
 
 ```bash
-nano /home/user/Portal/portal/apps_config.json
+nano /home/rootadmin/data/portal/apps_config.json
 ```
 
-### 步骤 2：在 `apps` 数组中添加新应用
+### Paso 2: Agregar la app en el array `apps`
 
 ```json
 {
-  "apps": [
-    // ... 现有应用 ...
-    {
-      "id": "your-app-id",
-      "name": "应用名称",
-      "name_en": "Application Name (English)",
-      "description": "应用描述，将显示在卡片上",
-      "category": "分类ID",
-      "url": "/your-app-path/",
-      "icon": "icon-name",
-      "enabled": true,
-      "version": "1.0.0",
-      "maintainer": "维护者信息",
-      "tags": ["tag1", "tag2"],
-      "port": 8XXX
-    }
-  ]
+  "id": "nueva-app",
+  "name": "Nueva Aplicación",
+  "name_en": "New Application",
+  "description": "Descripción de la aplicación...",
+  "category": "auditoria",
+  "url": "/nueva-app/",
+  "icon": "file-text",
+  "enabled": true,
+  "version": "1.0.0",
+  "maintainer": "Equipo Responsable",
+  "tags": ["tag1", "tag2"],
+  "port": 8502,
+  "access": {
+    "departments": ["auditoria"],
+    "roles": []
+  }
 }
 ```
 
-### 步骤 3：重启 Portal 服务
+### Paso 3: Reiniciar el Portal
 
 ```bash
-# 如果使用 gunicorn
-sudo systemctl restart portal
-
-# 如果直接运行 Flask
-# 重新启动 python portal/app.py
+sudo systemctl restart portal.service
 ```
 
----
+### Paso 4: Verificar
 
-## 配置文件详解
-
-### 应用配置字段说明
-
-| 字段 | 类型 | 必填 | 说明 |
-|------|------|------|------|
-| `id` | string | 是 | 应用唯一标识符，用于URL路由（如 `/go/your-app-id`） |
-| `name` | string | 是 | 应用显示名称 |
-| `name_en` | string | 否 | 英文名称（可选） |
-| `description` | string | 是 | 应用描述文字 |
-| `category` | string | 是 | 所属分类ID，必须匹配 `categories` 中的 `id` |
-| `url` | string | 是 | 跳转URL（相对路径或完整URL） |
-| `icon` | string | 否 | Lucide 图标名称，默认为 `box` |
-| `enabled` | boolean | 否 | 是否启用，默认为 `true` |
-| `version` | string | 否 | 版本号 |
-| `maintainer` | string | 否 | 维护者信息 |
-| `tags` | array | 否 | 标签数组，用于显示和搜索 |
-| `port` | number | 是 | 服务端口号（用于智能路由） |
-
-### URL 配置说明
-
-URL 可以是以下几种形式：
-
-1. **相对路径**（推荐用于同服务器应用）:
-   ```json
-   "url": "/app/"
-   ```
-   - 通过 Nginx 访问时，直接使用相对路径
-   - 直接访问 Flask Portal 时，自动转换为 `http://server_ip:port/`
-
-2. **完整 URL**（用于外部服务）:
-   ```json
-   "url": "https://external-service.com/app"
-   ```
-
-3. **带端口的 URL**:
-   ```json
-   "url": "http://192.168.1.100:3000/"
-   ```
-
-### 可用图标
-
-Portal 使用 [Lucide Icons](https://lucide.dev/icons/)，常用图标包括：
-
-| 图标名称 | 用途 |
-|----------|------|
-| `bar-chart-2` | 数据分析、图表应用 |
-| `zap` | API、高性能应用 |
-| `database` | 数据库相关 |
-| `file-text` | 文档处理 |
-| `settings` | 设置工具 |
-| `terminal` | 命令行工具 |
-| `globe` | Web 应用 |
-| `cpu` | 系统监控 |
-| `shield` | 安全工具 |
-| `code` | 开发工具 |
+1. Iniciar sesión con un usuario del departamento `auditoria`
+2. La app debería aparecer en el dashboard
+3. Hacer clic → debe redirigir correctamente
 
 ---
 
-## 添加分类
+## Campos de Configuración
 
-如果需要新的应用分类，在 `categories` 数组中添加：
+| Campo | Tipo | Requerido | Descripción |
+|-------|------|-----------|-------------|
+| `id` | string | Sí | ID único, usado en `/go/<id>` |
+| `name` | string | Sí | Nombre de la app |
+| `name_en` | string | No | Nombre en inglés |
+| `description` | string | Sí | Descripción visible |
+| `category` | string | Sí | ID de categoría |
+| `url` | string | Sí | URL de destino |
+| `icon` | string | No | Icono Lucide (default: `box`) |
+| `enabled` | bool | No | Activar/desactivar (default: `true`) |
+| `version` | string | No | Versión |
+| `maintainer` | string | No | Responsable |
+| `tags` | array | No | Etiquetas |
+| `port` | int | No | Puerto del servicio |
+| **`access`** | **object** | **No** | **Control de acceso RBAC** |
+
+### URL de la App
+
+| Tipo | Ejemplo | Uso |
+|------|---------|-----|
+| Ruta relativa | `/app/` | Apps del mismo servidor (via Nginx) |
+| URL completa | `https://external.com/app` | Apps externas |
+| URL con IP+puerto | `http://10.0.0.1:3000/` | Apps en otros servidores |
+
+---
+
+## Configurar Control de Acceso (RBAC)
+
+### Estructura del campo `access`
+
+```json
+"access": {
+  "departments": ["departamento1", "departamento2"],
+  "roles": ["rol1", "rol2"]
+}
+```
+
+### Reglas de acceso
+
+| `departments` | `roles` | Quién ve la app |
+|---------------|---------|-----------------|
+| `[]` o ausente | `[]` o ausente | **Todos** los usuarios |
+| `["auditoria"]` | `[]` | Todos del depto. Auditoría |
+| `[]` | `["manager", "socio"]` | Managers y Socios de cualquier depto. |
+| `["it"]` | `["senior"]` | Seniors del depto. IT |
+
+> Los **administradores** siempre ven todas las apps.
+
+### IDs de Departamento
+
+| ID Interno | Nombre en Pantalla |
+|------------|-------------------|
+| `auditoria` | Auditoría |
+| `precio_transferencia` | Precio de Transferencia |
+| `tax` | Tax |
+| `legal` | Legal |
+| `administracion_finanza` | Administración y Finanza |
+| `it` | IT |
+| `quality_risk` | Quality & Risk Management |
+| `aos` | AOS |
+| `otros` | Otros |
+
+### IDs de Rol
+
+| ID Interno | Nombre en Pantalla |
+|------------|-------------------|
+| `junior` | Junior |
+| `senior` | Senior |
+| `manager` | Manager |
+| `socio` | Socio |
+
+---
+
+## Verificar Permisos
+
+### Método 1: Desde el navegador
+
+1. Iniciar sesión con un usuario del departamento/rol esperado
+2. Verificar que la app aparece en el dashboard
+3. Hacer clic en la app → debe redirigir correctamente
+
+4. Iniciar sesión con un usuario de **otro** departamento
+5. Verificar que la app **NO** aparece en su dashboard
+6. Acceder directamente a `/go/<app_id>` → debe mostrar error 403
+
+### Método 2: Desde curl (requiere sesión)
+
+```bash
+# Intentar acceso directo sin login → debe redirigir a /login
+curl -s -o /dev/null -w "%{http_code}" http://80.225.186.223/go/nueva-app
+# Esperado: 302 (redirect to login)
+```
+
+### Método 3: Desde Admin Panel
+
+1. Login como Admin
+2. Ir a `/admin`
+3. Verificar que el usuario tiene el departamento correcto
+4. Editar departamento si es necesario
+5. El usuario verá las apps al re-iniciar sesión
+
+---
+
+## Agregar Categorías
 
 ```json
 {
-  "categories": [
-    // ... 现有分类 ...
-    {
-      "id": "new-category",
-      "name": "新分类名称",
-      "icon": "folder",
-      "description": "分类描述"
-    }
-  ]
+  "id": "nueva-categoria",
+  "name": "Nueva Categoría",
+  "icon": "folder",
+  "description": "Descripción de la categoría"
 }
 ```
 
+Las categorías sin apps asignadas no se muestran.
+
 ---
 
-## Nginx 配置（可选）
+## Nginx (Opcional)
 
-如果新应用需要通过 Nginx 反向代理，需要添加 Nginx location 配置：
-
-### 1. 编辑 Nginx 配置
+Si la nueva app necesita proxy Nginx:
 
 ```bash
 sudo nano /etc/nginx/sites-available/portal
 ```
 
-### 2. 添加 location 块
+Agregar bloque:
 
 ```nginx
-# 新应用路由
-location /your-app-path/ {
-    proxy_pass http://127.0.0.1:8XXX/;
+location /nueva-app/ {
+    proxy_pass http://127.0.0.1:8502/;
     proxy_http_version 1.1;
     proxy_set_header Upgrade $http_upgrade;
     proxy_set_header Connection 'upgrade';
     proxy_set_header Host $host;
     proxy_set_header X-Real-IP $remote_addr;
     proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;
-    proxy_set_header X-Forwarded-Proto $scheme;
-
-    # 超时设置
     proxy_connect_timeout 300;
     proxy_send_timeout 300;
     proxy_read_timeout 300;
 }
 ```
 
-### 3. 测试并重载 Nginx
-
 ```bash
-sudo nginx -t
-sudo systemctl reload nginx
+sudo nginx -t && sudo systemctl reload nginx
 ```
 
 ---
 
-## 完整示例
+## Ejemplo Completo
 
-### 示例：添加一个 Jupyter Notebook 应用
-
-#### 1. 修改 apps_config.json
+### App con restricción de departamento
 
 ```json
 {
-  "portal_name": "Portal InformePT",
-  "portal_description": "Portal de Acceso Unificado para InformePT",
-  "server_ip": "80.225.186.223",
-  "categories": [
-    {
-      "id": "informept",
-      "name": "Aplicaciones InformePT",
-      "icon": "layout-dashboard",
-      "description": "Aplicaciones principales"
-    },
-    {
-      "id": "analytics",
-      "name": "Herramientas de Análisis",
-      "icon": "bar-chart-3",
-      "description": "Herramientas de análisis de datos"
-    }
-  ],
-  "apps": [
-    {
-      "id": "informept-streamlit",
-      "name": "InformePT Streamlit",
-      "name_en": "InformePT Streamlit",
-      "description": "Aplicación web interactiva con interfaz visual...",
-      "category": "informept",
-      "url": "/app/",
-      "icon": "bar-chart-2",
-      "enabled": true,
-      "version": "1.0.0",
-      "maintainer": "InformePT Team",
-      "tags": ["streamlit", "web", "interactive"],
-      "port": 8501
-    },
-    {
-      "id": "jupyter-notebook",
-      "name": "Jupyter Notebook",
-      "name_en": "Jupyter Notebook",
-      "description": "Entorno interactivo para análisis de datos y desarrollo de código Python.",
-      "category": "analytics",
-      "url": "/jupyter/",
-      "icon": "code",
-      "enabled": true,
-      "version": "7.0.0",
-      "maintainer": "Data Team",
-      "tags": ["jupyter", "python", "notebook", "data-science"],
-      "port": 8888
-    }
-  ]
-}
-```
-
-#### 2. 添加 Nginx 配置（如果需要）
-
-```nginx
-# Jupyter Notebook
-location /jupyter/ {
-    proxy_pass http://127.0.0.1:8888/;
-    proxy_http_version 1.1;
-    proxy_set_header Upgrade $http_upgrade;
-    proxy_set_header Connection "upgrade";
-    proxy_set_header Host $host;
-    proxy_set_header X-Real-IP $remote_addr;
-    proxy_buffering off;
-}
-
-# Jupyter WebSocket
-location /jupyter/api/kernels/ {
-    proxy_pass http://127.0.0.1:8888/api/kernels/;
-    proxy_http_version 1.1;
-    proxy_set_header Upgrade $http_upgrade;
-    proxy_set_header Connection "upgrade";
-}
-```
-
----
-
-## 常见问题
-
-### Q1: 添加应用后页面没有显示
-
-**检查项：**
-1. 确认 `enabled` 设置为 `true`
-2. 确认 `category` ID 在 `categories` 中存在
-3. 检查 JSON 格式是否正确（可用 `python3 -m json.tool apps_config.json` 验证）
-
-### Q2: 点击应用显示 "Página no encontrada"
-
-**原因：** 应用 ID 不匹配或应用被禁用
-
-**解决方案：**
-```bash
-# 检查配置文件中的应用ID
-grep '"id"' /home/user/Portal/portal/apps_config.json
-```
-
-### Q3: 点击后无法访问应用服务
-
-**检查项：**
-1. 确认目标服务正在运行：
-   ```bash
-   sudo netstat -tlnp | grep :8XXX
-   ```
-2. 确认 `port` 字段设置正确
-3. 确认 `server_ip` 配置正确
-4. 如果通过 Nginx 访问，确认 Nginx location 配置正确
-
-### Q4: 如何禁用某个应用？
-
-将 `enabled` 设置为 `false`：
-
-```json
-{
-  "id": "app-to-disable",
-  "enabled": false,
-  // ... 其他配置
-}
-```
-
-### Q5: 如何验证 JSON 配置格式？
-
-```bash
-python3 -m json.tool /home/user/Portal/portal/apps_config.json
-```
-
-如果输出格式化后的 JSON，说明格式正确。如果报错，则需要修复语法错误。
-
----
-
-## 配置文件模板
-
-以下是一个空白的配置模板，可用于快速添加新应用：
-
-```json
-{
-  "id": "",
-  "name": "",
-  "name_en": "",
-  "description": "",
-  "category": "",
-  "url": "/",
-  "icon": "box",
+  "id": "informe-auditoria",
+  "name": "Informe de Auditoría",
+  "name_en": "Audit Report",
+  "description": "Generación automática de informes de auditoría.",
+  "category": "auditoria",
+  "url": "/auditoria-report/",
+  "icon": "clipboard-check",
   "enabled": true,
   "version": "1.0.0",
-  "maintainer": "",
-  "tags": [],
-  "port": 0
+  "maintainer": "Equipo de Auditoría",
+  "tags": ["auditoria", "informe", "automatización"],
+  "port": 8502,
+  "access": {
+    "departments": ["auditoria"],
+    "roles": []
+  }
+}
+```
+
+### App con restricción de rol
+
+```json
+{
+  "id": "panel-direccion",
+  "name": "Panel de Dirección",
+  "name_en": "Executive Dashboard",
+  "description": "Panel de control para socios y managers con KPIs estratégicos.",
+  "category": "general",
+  "url": "/panel-exec/",
+  "icon": "bar-chart-3",
+  "enabled": true,
+  "version": "1.0.0",
+  "maintainer": "Equipo IT",
+  "tags": ["dashboard", "kpi", "ejecutivo"],
+  "port": 8503,
+  "access": {
+    "departments": [],
+    "roles": ["manager", "socio"]
+  }
+}
+```
+
+### App sin restricción (todos)
+
+```json
+{
+  "id": "wiki-interna",
+  "name": "Wiki Interna",
+  "description": "Base de conocimientos de la organización.",
+  "category": "general",
+  "url": "https://wiki.internal.com/",
+  "icon": "book-open",
+  "enabled": true,
+  "access": {}
 }
 ```
 
 ---
 
-**文档版本**: 1.0.0
-**最后更新**: 2026-01-14
+## FAQ
+
+### Q1: La app no aparece en el dashboard
+
+1. Verificar `enabled: true`
+2. Verificar que la `category` existe en `categories[]`
+3. Verificar que el usuario tiene el departamento/rol correcto
+4. Validar JSON: `python3 -m json.tool apps_config.json`
+
+### Q2: Error 403 al acceder a la app
+
+El usuario no tiene permiso. Verificar:
+- El departamento del usuario (en Admin panel)
+- La configuración `access.departments` de la app
+- El rol del usuario vs `access.roles`
+
+### Q3: ¿Cómo desactivar el control de acceso?
+
+Establecer `access` vacío o eliminar el campo:
+```json
+"access": {}
+```
+
+### Q4: ¿Los cambios en DATA_DIR se pierden con git pull?
+
+No. `DATA_DIR` está fuera del repositorio. Los symlinks se recrean con `sync-portal-data.sh`.
+
+---
+
+**Versión del documento**: 2.0.0
+**Última actualización**: 2025-02-23

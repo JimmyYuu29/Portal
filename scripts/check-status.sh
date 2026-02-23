@@ -1,130 +1,120 @@
 #!/bin/bash
-# Portal状态检查脚本
+# =============================================================
+# Portal Status Check Script
+# =============================================================
 
 echo "================================================"
-echo "Portal系统状态检查"
+echo "Portal System Status Check"
 echo "================================================"
 echo ""
 
-# 颜色定义
 RED='\033[0;31m'
 GREEN='\033[0;32m'
 YELLOW='\033[1;33m'
 NC='\033[0m'
 
-# 检查Nginx状态
-echo "1. Nginx服务状态："
+# 1. Portal Flask Service
+echo "1. Portal (Flask) Service:"
+if sudo systemctl is-active --quiet portal.service 2>/dev/null; then
+    echo -e "   ${GREEN}✓ Running${NC}"
+else
+    echo -e "   ${RED}✗ Not running${NC}"
+fi
+
+# 2. Nginx
+echo ""
+echo "2. Nginx Service:"
 if sudo systemctl is-active --quiet nginx; then
-    echo -e "   ${GREEN}✓ 运行中${NC}"
+    echo -e "   ${GREEN}✓ Running${NC}"
 else
-    echo -e "   ${RED}✗ 未运行${NC}"
+    echo -e "   ${RED}✗ Not running${NC}"
 fi
 
-# 检查API服务状态
+# 3. API
 echo ""
-echo "2. API服务状态："
-if sudo systemctl is-active --quiet informept-api.service; then
-    echo -e "   ${GREEN}✓ 运行中${NC}"
+echo "3. API Service (informept-api):"
+if sudo systemctl is-active --quiet informept-api.service 2>/dev/null; then
+    echo -e "   ${GREEN}✓ Running${NC}"
 else
-    echo -e "   ${RED}✗ 未运行${NC}"
+    echo -e "   ${RED}✗ Not running${NC}"
 fi
 
-# 检查Streamlit服务状态
+# 4. Streamlit
 echo ""
-echo "3. Streamlit服务状态："
-if sudo systemctl is-active --quiet streamlit-informept.service; then
-    echo -e "   ${GREEN}✓ 运行中${NC}"
+echo "4. Streamlit Service:"
+if sudo systemctl is-active --quiet streamlit-informept.service 2>/dev/null; then
+    echo -e "   ${GREEN}✓ Running${NC}"
 else
-    echo -e "   ${RED}✗ 未运行${NC}"
+    echo -e "   ${RED}✗ Not running${NC}"
 fi
 
-# 检查端口监听
+# 5. Ports
 echo ""
-echo "4. 端口监听状态："
-echo "   端口 80 (HTTP):"
-if sudo netstat -tlnp 2>/dev/null | grep -q ':80 ' || sudo ss -tlnp 2>/dev/null | grep -q ':80 '; then
-    echo -e "      ${GREEN}✓ 监听中${NC}"
-else
-    echo -e "      ${RED}✗ 未监听${NC}"
-fi
-
-echo "   端口 8000 (API):"
-if sudo netstat -tlnp 2>/dev/null | grep -q ':8000 ' || sudo ss -tlnp 2>/dev/null | grep -q ':8000 '; then
-    echo -e "      ${GREEN}✓ 监听中${NC}"
-else
-    echo -e "      ${RED}✗ 未监听${NC}"
-fi
-
-echo "   端口 8501 (Streamlit):"
-if sudo netstat -tlnp 2>/dev/null | grep -q ':8501 ' || sudo ss -tlnp 2>/dev/null | grep -q ':8501 '; then
-    echo -e "      ${GREEN}✓ 监听中${NC}"
-else
-    echo -e "      ${RED}✗ 未监听${NC}"
-fi
-
-# 检查防火墙状态
-echo ""
-echo "5. 防火墙状态："
-if command -v ufw &> /dev/null; then
-    if sudo ufw status | grep -q "Status: active"; then
-        echo -e "   ${GREEN}✓ 已启用${NC}"
-        echo "   允许的端口："
-        sudo ufw status | grep ALLOW | grep -E '(22|80|443)' | sed 's/^/      /'
+echo "5. Port Status:"
+for PORT_INFO in "80:HTTP/Nginx" "5000:Portal/Flask" "8000:API" "8501:Streamlit"; do
+    PORT=$(echo "$PORT_INFO" | cut -d: -f1)
+    NAME=$(echo "$PORT_INFO" | cut -d: -f2)
+    echo "   Port ${PORT} (${NAME}):"
+    if sudo ss -tlnp 2>/dev/null | grep -q ":${PORT} "; then
+        echo -e "      ${GREEN}✓ Listening${NC}"
     else
-        echo -e "   ${YELLOW}⚠ 未启用${NC}"
+        echo -e "      ${RED}✗ Not listening${NC}"
     fi
-else
-    echo -e "   ${YELLOW}⚠ UFW未安装${NC}"
-fi
+done
 
-# 测试HTTP访问
+# 6. HTTP Tests
 echo ""
-echo "6. HTTP访问测试："
-echo "   Portal主页 (/):"
-if curl -s -o /dev/null -w "%{http_code}" http://localhost/ | grep -q "200"; then
-    echo -e "      ${GREEN}✓ 可访问 (HTTP 200)${NC}"
+echo "6. HTTP Access Tests:"
+
+echo "   Portal Login (/):"
+HTTP_CODE=$(curl -s -o /dev/null -w "%{http_code}" http://localhost/ 2>/dev/null)
+if [[ "$HTTP_CODE" == "200" ]] || [[ "$HTTP_CODE" == "302" ]]; then
+    echo -e "      ${GREEN}✓ Accessible (HTTP ${HTTP_CODE})${NC}"
 else
-    echo -e "      ${RED}✗ 不可访问${NC}"
+    echo -e "      ${RED}✗ HTTP ${HTTP_CODE}${NC}"
 fi
 
-echo "   健康检查 (/health):"
-if curl -s -o /dev/null -w "%{http_code}" http://localhost/health | grep -q "200"; then
-    echo -e "      ${GREEN}✓ 可访问 (HTTP 200)${NC}"
+echo "   Health Check (/health):"
+HTTP_CODE=$(curl -s -o /dev/null -w "%{http_code}" http://localhost/health 2>/dev/null)
+if [[ "$HTTP_CODE" == "200" ]]; then
+    echo -e "      ${GREEN}✓ Healthy (HTTP 200)${NC}"
 else
-    echo -e "      ${RED}✗ 不可访问${NC}"
+    echo -e "      ${RED}✗ HTTP ${HTTP_CODE}${NC}"
 fi
 
-echo "   API端点 (/api/):"
-HTTP_CODE=$(curl -s -o /dev/null -w "%{http_code}" http://localhost/api/)
+echo "   API (/api/):"
+HTTP_CODE=$(curl -s -o /dev/null -w "%{http_code}" http://localhost/api/ 2>/dev/null)
 if [[ "$HTTP_CODE" == "200" ]] || [[ "$HTTP_CODE" == "404" ]] || [[ "$HTTP_CODE" == "307" ]]; then
-    echo -e "      ${GREEN}✓ 可访问 (HTTP $HTTP_CODE)${NC}"
+    echo -e "      ${GREEN}✓ Accessible (HTTP ${HTTP_CODE})${NC}"
 else
-    echo -e "      ${YELLOW}⚠ HTTP $HTTP_CODE${NC}"
+    echo -e "      ${YELLOW}⚠ HTTP ${HTTP_CODE}${NC}"
 fi
 
-echo "   Streamlit端点 (/app/):"
-HTTP_CODE=$(curl -s -o /dev/null -w "%{http_code}" http://localhost/app/)
-if [[ "$HTTP_CODE" == "200" ]] || [[ "$HTTP_CODE" == "404" ]] || [[ "$HTTP_CODE" == "307" ]]; then
-    echo -e "      ${GREEN}✓ 可访问 (HTTP $HTTP_CODE)${NC}"
+# 7. Data Directory
+echo ""
+echo "7. Data Directory:"
+DATA_DIR="${DATA_DIR:-/home/rootadmin/data/portal}"
+if [ -d "${DATA_DIR}" ]; then
+    echo -e "   ${GREEN}✓ ${DATA_DIR} exists${NC}"
+    [ -f "${DATA_DIR}/users.db" ] && echo -e "   ${GREEN}✓ users.db present ($(du -h "${DATA_DIR}/users.db" | cut -f1))${NC}" || echo -e "   ${YELLOW}⚠ users.db not found${NC}"
+    [ -f "${DATA_DIR}/apps_config.json" ] && echo -e "   ${GREEN}✓ apps_config.json present${NC}" || echo -e "   ${YELLOW}⚠ apps_config.json not found${NC}"
 else
-    echo -e "      ${YELLOW}⚠ HTTP $HTTP_CODE${NC}"
+    echo -e "   ${RED}✗ ${DATA_DIR} not found${NC}"
 fi
 
-# 磁盘空间检查
+# 8. Disk & Memory
 echo ""
-echo "7. 磁盘空间："
-df -h / | tail -1 | awk '{print "   使用: "$3" / "$2" ("$5")"}'
+echo "8. Disk Usage:"
+df -h / | tail -1 | awk '{print "   Used: "$3" / "$2" ("$5")"}'
 
-# 内存使用
 echo ""
-echo "8. 内存使用："
-free -h | grep Mem | awk '{print "   使用: "$3" / "$2}'
+echo "9. Memory Usage:"
+free -h | grep Mem | awk '{print "   Used: "$3" / "$2}'
 
 echo ""
 echo "================================================"
-echo "详细日志查看命令："
+echo "Logs:"
+echo "  sudo journalctl -u portal.service -n 30"
 echo "  sudo tail -f /var/log/nginx/portal_access.log"
-echo "  sudo tail -f /var/log/nginx/portal_error.log"
-echo "  sudo journalctl -u informept-api.service -n 50"
-echo "  sudo journalctl -u streamlit-informept.service -n 50"
+echo "  sudo journalctl -u informept-api.service -n 30"
 echo "================================================"

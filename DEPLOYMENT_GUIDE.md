@@ -1,183 +1,156 @@
-# InformePT Portal 完整部署指南
+# Portal Forvis Mazars - Guía de Despliegue Completa
 
-本文档提供从零开始在Ubuntu服务器上部署Portal的完整步骤。
-
----
-
-## 目录
-
-1. [服务器信息](#服务器信息)
-2. [前提条件](#前提条件)
-3. [第一步：连接服务器](#第一步连接服务器)
-4. [第二步：系统准备](#第二步系统准备)
-5. [第三步：克隆Portal仓库](#第三步克隆portal仓库)
-6. [第四步：配置Nginx反向代理](#第四步配置nginx反向代理)
-7. [第五步：创建Portal主页](#第五步创建portal主页)
-8. [第六步：配置防火墙](#第六步配置防火墙)
-9. [第七步：验证部署](#第七步验证部署)
-10. [第八步：配置开机自启](#第八步配置开机自启)
-11. [可选：SSL证书配置](#可选ssl证书配置)
-12. [日志管理](#日志管理)
-13. [备份策略](#备份策略)
-14. [故障排查](#故障排查)
-15. [维护命令速查表](#维护命令速查表)
+Guía completa desde cero para desplegar el Portal en un servidor Ubuntu.
 
 ---
 
-## 服务器信息
+## Índice
 
-| 项目 | 值 |
-|------|-----|
-| **服务器公网IP** | 80.225.186.223 |
-| **操作系统** | Ubuntu 18.04+ |
-| **InformePT应用目录** | /home/ubuntu/InformePT |
-| **Portal部署目录** | /home/ubuntu/Portal |
-| **Streamlit服务端口** | 8501 |
-| **API服务端口** | 8000 |
-| **Nginx监听端口** | 80 (HTTP), 443 (HTTPS) |
-
----
-
-## 前提条件
-
-在开始之前，请确保：
-
-1. **InformePT应用已部署并运行**
-   - 位置：/home/ubuntu/InformePT
-   - API服务：informept-api.service（端口8000）
-   - Streamlit服务：streamlit-informept.service（端口8501）
-
-2. **服务已启动**
-   ```bash
-   sudo systemctl daemon-reload
-   sudo systemctl restart informept-api.service
-   sudo systemctl restart streamlit-informept.service
-   ```
-
-3. **有服务器SSH访问权限**
+1. [Información del Servidor](#información-del-servidor)
+2. [Requisitos Previos](#requisitos-previos)
+3. [Paso 1: Conectar al Servidor](#paso-1-conectar-al-servidor)
+4. [Paso 2: Preparar el Sistema](#paso-2-preparar-el-sistema)
+5. [Paso 3: Clonar el Repositorio](#paso-3-clonar-el-repositorio)
+6. [Paso 4: Crear DATA_DIR y Sincronizar](#paso-4-crear-data_dir-y-sincronizar)
+7. [Paso 5: Instalar Dependencias Python](#paso-5-instalar-dependencias-python)
+8. [Paso 6: Configurar Nginx](#paso-6-configurar-nginx)
+9. [Paso 7: Configurar systemd](#paso-7-configurar-systemd)
+10. [Paso 8: Configurar Variables de Entorno](#paso-8-configurar-variables-de-entorno)
+11. [Paso 9: Iniciar Servicios](#paso-9-iniciar-servicios)
+12. [Paso 10: Verificar Despliegue](#paso-10-verificar-despliegue)
+13. [Paso 11: Configurar Firewall](#paso-11-configurar-firewall)
+14. [SSL (Opcional)](#ssl-opcional)
+15. [Gestión de Logs](#gestión-de-logs)
+16. [Estrategia de Backup](#estrategia-de-backup)
+17. [Actualización del Portal](#actualización-del-portal)
+18. [Rollback](#rollback)
+19. [Solución de Problemas](#solución-de-problemas)
+20. [Referencia Rápida de Comandos](#referencia-rápida-de-comandos)
 
 ---
 
-## 第一步：连接服务器
+## Información del Servidor
 
-使用SSH连接到服务器：
+| Ítem | Valor |
+|------|-------|
+| **IP Pública** | 80.225.186.223 |
+| **Sistema Operativo** | Ubuntu 18.04+ |
+| **Directorio Portal** | /home/rootadmin/Portal |
+| **DATA_DIR** | /home/rootadmin/data/portal |
+| **Puerto Portal Flask** | 5000 (gunicorn) |
+| **Puerto Streamlit** | 8501 |
+| **Puerto API** | 8000 |
+| **Nginx** | Puerto 80 (HTTP), 443 (HTTPS) |
+
+---
+
+## Requisitos Previos
+
+1. **Acceso SSH** al servidor como `rootadmin`
+2. **Git** instalado
+3. **Python 3.8+** instalado
+4. **InformePT** desplegado y funcionando (opcional, para /app/ y /api/)
+
+---
+
+## Paso 1: Conectar al Servidor
 
 ```bash
-ssh ubuntu@80.225.186.223
-```
-
-如果使用密钥认证：
-
-```bash
-ssh -i ~/.ssh/your_key.pem ubuntu@80.225.186.223
+ssh rootadmin@80.225.186.223
 ```
 
 ---
 
-## 第二步：系统准备
-
-### 2.1 更新系统包
+## Paso 2: Preparar el Sistema
 
 ```bash
-sudo apt update
-sudo apt upgrade -y
-```
-
-### 2.2 安装必要依赖
-
-```bash
-sudo apt install -y git nginx curl net-tools ufw
-```
-
-### 2.3 验证安装
-
-```bash
-# 检查Nginx版本
-nginx -v
-
-# 检查Git版本
-git --version
+sudo apt update && sudo apt upgrade -y
+sudo apt install -y git nginx curl net-tools python3 python3-pip python3-venv ufw
 ```
 
 ---
 
-## 第三步：克隆Portal仓库
-
-### 3.1 进入部署目录
+## Paso 3: Clonar el Repositorio
 
 ```bash
-cd /home/ubuntu
-```
-
-### 3.2 克隆仓库
-
-**方式1：HTTPS（推荐，如果是公开仓库）**
-```bash
+cd /home/rootadmin
 git clone https://github.com/JimmyYuu29/Portal.git
-```
-
-**方式2：SSH（如果配置了SSH密钥）**
-```bash
-git clone git@github.com:JimmyYuu29/Portal.git
-```
-
-### 3.3 验证克隆成功
-
-```bash
-ls -la /home/ubuntu/Portal
-```
-
-应该看到以下目录结构：
-```
-Portal/
-├── README.md
-├── DEPLOYMENT_GUIDE.md
-├── QUICK_START.md
-├── Standard_v3.1_EN.md
-├── portal/
-└── scripts/
-```
-
-### 3.4 设置目录权限
-
-```bash
-sudo chown -R ubuntu:ubuntu /home/ubuntu/Portal
-chmod 755 /home/ubuntu/Portal
-chmod +x /home/ubuntu/Portal/scripts/*.sh
+cd Portal
+chmod +x scripts/*.sh
 ```
 
 ---
 
-## 第四步：配置Nginx反向代理
+## Paso 4: Crear DATA_DIR y Sincronizar
 
-### 4.1 创建Nginx配置文件
+El script `sync-portal-data.sh` gestiona la persistencia de datos:
+
+```bash
+export DATA_DIR=/home/rootadmin/data/portal
+export REPO_DIR=/home/rootadmin/Portal
+./scripts/sync-portal-data.sh
+```
+
+**Lo que hace:**
+1. Crea `DATA_DIR` si no existe
+2. Copia `apps_config.json` por defecto a DATA_DIR (primera vez)
+3. Crea symlinks:
+   - `portal/apps_config.json` → `DATA_DIR/apps_config.json`
+4. Establece permisos
+
+---
+
+## Paso 5: Instalar Dependencias Python
+
+```bash
+cd /home/rootadmin/Portal/portal
+python3 -m venv venv
+source venv/bin/activate
+pip install --upgrade pip
+pip install -r requirements.txt
+```
+
+Dependencias clave:
+- `Flask` - Framework web
+- `Flask-Login` - Autenticación de sesiones
+- `Flask-WTF` - Protección CSRF
+- `gunicorn` - Servidor WSGI de producción
+- `requests` - Cliente HTTP (Power Automate)
+
+---
+
+## Paso 6: Configurar Nginx
+
+### 6.1 Crear configuración
 
 ```bash
 sudo nano /etc/nginx/sites-available/portal
 ```
 
-### 4.2 添加以下配置内容
+### 6.2 Contenido de la configuración
 
 ```nginx
-# InformePT Portal Nginx配置
-# 服务器: 80.225.186.223
-
 server {
     listen 80;
     server_name 80.225.186.223;
 
-    # 日志配置
     access_log /var/log/nginx/portal_access.log;
     error_log /var/log/nginx/portal_error.log;
 
-    # Portal主页（静态文件）
+    # Portal Flask backend (login, dashboard, /go/<app_id>)
     location / {
-        root /home/ubuntu/Portal/static;
-        index index.html index.htm;
-        try_files $uri $uri/ =404;
+        proxy_pass http://127.0.0.1:5000;
+        proxy_http_version 1.1;
+        proxy_set_header Host $host;
+        proxy_set_header X-Real-IP $remote_addr;
+        proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;
+        proxy_set_header X-Forwarded-Proto $scheme;
+        proxy_connect_timeout 30;
+        proxy_send_timeout 60;
+        proxy_read_timeout 60;
     }
 
-    # API版本 - 路由到端口8000
+    # API (FastAPI)
     location /api/ {
         proxy_pass http://127.0.0.1:8000/;
         proxy_http_version 1.1;
@@ -188,14 +161,12 @@ server {
         proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;
         proxy_set_header X-Forwarded-Proto $scheme;
         proxy_cache_bypass $http_upgrade;
-
-        # 超时设置（长请求支持）
         proxy_connect_timeout 300;
         proxy_send_timeout 300;
         proxy_read_timeout 300;
     }
 
-    # Streamlit版本 - 路由到端口8501
+    # Streamlit
     location /app/ {
         proxy_pass http://127.0.0.1:8501/;
         proxy_http_version 1.1;
@@ -206,15 +177,13 @@ server {
         proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;
         proxy_set_header X-Forwarded-Proto $scheme;
         proxy_cache_bypass $http_upgrade;
-
-        # Streamlit特定配置
         proxy_buffering off;
         proxy_connect_timeout 300;
         proxy_send_timeout 300;
         proxy_read_timeout 300;
     }
 
-    # Streamlit WebSocket支持
+    # Streamlit WebSocket
     location /_stcore/stream {
         proxy_pass http://127.0.0.1:8501/_stcore/stream;
         proxy_http_version 1.1;
@@ -224,668 +193,321 @@ server {
         proxy_read_timeout 86400;
     }
 
-    # Streamlit静态资源
-    location /static/ {
-        proxy_pass http://127.0.0.1:8501/static/;
-    }
-
-    # 健康检查端点
+    # Health check
     location /health {
+        proxy_pass http://127.0.0.1:5000/health;
+        proxy_set_header Host $host;
         access_log off;
-        return 200 "Portal OK\n";
-        add_header Content-Type text/plain;
     }
 }
 ```
 
-### 4.3 启用配置
+### 6.3 Activar la configuración
 
 ```bash
-# 创建符号链接
 sudo ln -sf /etc/nginx/sites-available/portal /etc/nginx/sites-enabled/
-
-# 删除默认配置（如果存在）
 sudo rm -f /etc/nginx/sites-enabled/default
-
-# 测试Nginx配置语法
 sudo nginx -t
-```
-
-如果测试成功，会显示：
-```
-nginx: the configuration file /etc/nginx/nginx.conf syntax is ok
-nginx: configuration file /etc/nginx/nginx.conf test is successful
-```
-
-### 4.4 重新加载Nginx
-
-```bash
 sudo systemctl reload nginx
 ```
 
+> **Cambio vs v1.0**: `location /` ahora hace proxy a Flask:5000 en vez de servir archivos estáticos. Los bloques `/api/` y `/app/` se mantienen sin cambios.
+
 ---
 
-## 第五步：创建Portal主页
-
-### 5.1 创建静态文件目录
+## Paso 7: Configurar systemd
 
 ```bash
-mkdir -p /home/ubuntu/Portal/static
+sudo cp /home/rootadmin/Portal/portal.service /etc/systemd/system/
+sudo systemctl daemon-reload
+sudo systemctl enable portal.service
 ```
 
-### 5.2 创建Portal主页
+El archivo `portal.service` usa gunicorn con 2 workers en el puerto 5000.
+
+---
+
+## Paso 8: Configurar Variables de Entorno
+
+### Método recomendado: systemd override
 
 ```bash
-nano /home/ubuntu/Portal/static/index.html
+sudo systemctl edit portal.service
 ```
 
-添加以下内容：
+Agregar las variables secretas:
 
-```html
-<!DOCTYPE html>
-<html lang="zh-CN">
-<head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>InformePT Portal</title>
-    <style>
-        * {
-            margin: 0;
-            padding: 0;
-            box-sizing: border-box;
-        }
-
-        body {
-            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif;
-            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
-            min-height: 100vh;
-            display: flex;
-            justify-content: center;
-            align-items: center;
-            padding: 20px;
-        }
-
-        .container {
-            background: white;
-            border-radius: 20px;
-            box-shadow: 0 20px 60px rgba(0, 0, 0, 0.3);
-            padding: 60px;
-            max-width: 900px;
-            width: 100%;
-        }
-
-        h1 {
-            color: #333;
-            margin-bottom: 10px;
-            font-size: 2.5em;
-            text-align: center;
-        }
-
-        .subtitle {
-            color: #666;
-            text-align: center;
-            margin-bottom: 50px;
-            font-size: 1.1em;
-        }
-
-        .server-info {
-            background: #f0f4f8;
-            border-radius: 10px;
-            padding: 15px 20px;
-            margin-bottom: 40px;
-            text-align: center;
-            font-family: monospace;
-            color: #555;
-        }
-
-        .apps {
-            display: grid;
-            grid-template-columns: repeat(auto-fit, minmax(350px, 1fr));
-            gap: 30px;
-            margin-top: 30px;
-        }
-
-        .app-card {
-            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
-            border-radius: 15px;
-            padding: 35px;
-            text-decoration: none;
-            color: white;
-            transition: transform 0.3s, box-shadow 0.3s;
-            box-shadow: 0 5px 15px rgba(0, 0, 0, 0.1);
-        }
-
-        .app-card:hover {
-            transform: translateY(-8px);
-            box-shadow: 0 15px 40px rgba(0, 0, 0, 0.2);
-        }
-
-        .app-card h2 {
-            margin-bottom: 15px;
-            font-size: 1.6em;
-        }
-
-        .app-card p {
-            font-size: 1em;
-            line-height: 1.7;
-            opacity: 0.9;
-            margin-bottom: 15px;
-        }
-
-        .badge {
-            display: inline-block;
-            background: rgba(255, 255, 255, 0.2);
-            padding: 8px 18px;
-            border-radius: 20px;
-            font-size: 0.9em;
-            margin-top: 10px;
-        }
-
-        .status {
-            text-align: center;
-            margin-top: 40px;
-            padding: 20px;
-            background: #f8f9fa;
-            border-radius: 10px;
-        }
-
-        .status-indicator {
-            display: inline-block;
-            width: 12px;
-            height: 12px;
-            background: #28a745;
-            border-radius: 50%;
-            margin-right: 10px;
-            animation: pulse 2s infinite;
-        }
-
-        @keyframes pulse {
-            0%, 100% { opacity: 1; transform: scale(1); }
-            50% { opacity: 0.6; transform: scale(0.95); }
-        }
-
-        .footer {
-            text-align: center;
-            margin-top: 40px;
-            color: #999;
-            font-size: 0.9em;
-        }
-
-        @media (max-width: 768px) {
-            .container {
-                padding: 30px;
-            }
-            h1 {
-                font-size: 1.8em;
-            }
-            .apps {
-                grid-template-columns: 1fr;
-            }
-        }
-    </style>
-</head>
-<body>
-    <div class="container">
-        <h1>InformePT Portal</h1>
-        <p class="subtitle">统一应用入口 | Unified Application Portal</p>
-
-        <div class="server-info">
-            Server: 80.225.186.223
-        </div>
-
-        <div class="apps">
-            <a href="/app/" class="app-card">
-                <h2>Streamlit版本</h2>
-                <p>交互式Web应用，提供可视化界面和实时数据分析功能。适合数据探索、报告生成和演示。</p>
-                <span class="badge">端口: 8501 | 路径: /app/</span>
-            </a>
-
-            <a href="/api/docs" class="app-card">
-                <h2>API版本</h2>
-                <p>RESTful API接口，提供高性能的程序化访问。适合系统集成、自动化调用和批量处理。</p>
-                <span class="badge">端口: 8000 | 路径: /api/</span>
-            </a>
-        </div>
-
-        <div class="status">
-            <span class="status-indicator"></span>
-            <strong>系统状态:</strong> 所有服务运行正常
-        </div>
-
-        <div class="footer">
-            <p>InformePT Portal v1.0 | Powered by Nginx</p>
-        </div>
-    </div>
-</body>
-</html>
+```ini
+[Service]
+Environment="SECRET_KEY=GENERA-UNA-CLAVE-SECRETA-LARGA-AQUI"
+Environment="POWER_AUTOMATE_URL=https://prod-XX.westeurope.logic.azure.com:443/workflows/..."
+Environment="POWER_AUTOMATE_SHARED_SECRET=tu-secreto-compartido-aqui"
 ```
-
-### 5.3 设置文件权限
 
 ```bash
-chmod 644 /home/ubuntu/Portal/static/index.html
+sudo systemctl daemon-reload
+```
+
+### Variables disponibles
+
+| Variable | Obligatoria | Descripción |
+|----------|-------------|-------------|
+| `SECRET_KEY` | ✅ Sí | Clave secreta Flask |
+| `DATA_DIR` | No (default: /home/rootadmin/data/portal) | Directorio de datos |
+| `PORTAL_DOMAIN` | No (default: http://80.225.186.223) | Dominio para reset links |
+| `POWER_AUTOMATE_URL` | Para email | URL del Flow HTTP Trigger |
+| `POWER_AUTOMATE_SHARED_SECRET` | Para email | Secreto compartido |
+| `POWER_AUTOMATE_TIMEOUT_SECONDS` | No (default: 10) | Timeout HTTP |
+| `POWER_AUTOMATE_RETRIES` | No (default: 3) | Reintentos |
+| `PORTAL_HTTPS` | No | Activar cookie Secure |
+
+---
+
+## Paso 9: Iniciar Servicios
+
+```bash
+sudo systemctl start portal.service
+sudo systemctl restart nginx
+
+# Verificar
+sudo systemctl status portal.service
+sudo systemctl status nginx
 ```
 
 ---
 
-## 第六步：配置防火墙
+## Paso 10: Verificar Despliegue
 
-### 6.1 启用UFW防火墙
+### Desde el servidor
 
 ```bash
-# 启用UFW（如果尚未启用）
-sudo ufw enable
+# Health check
+curl -s http://localhost/health | python3 -m json.tool
+
+# Login page (debe retornar 200)
+curl -s -o /dev/null -w "%{http_code}" http://localhost/login
+
+# Health check completo
+./scripts/check-status.sh
 ```
 
-### 6.2 配置防火墙规则
+### Desde el navegador
+
+| URL | Resultado Esperado |
+|-----|-------------------|
+| http://80.225.186.223/ | Redirige a /login |
+| http://80.225.186.223/login | Página de login |
+| http://80.225.186.223/health | JSON `{"status": "healthy"}` |
+| http://80.225.186.223/app/ | Streamlit |
+| http://80.225.186.223/api/docs | Documentación API |
+
+### Primer login
+
+1. Abrir http://80.225.186.223/login
+2. Username: `Admin` / Password: `Admin123`
+3. Dashboard muestra todas las apps
+4. Ir a Admin panel → verificar usuarios
+
+---
+
+## Paso 11: Configurar Firewall
 
 ```bash
-# 允许SSH（重要！防止被锁定）
 sudo ufw allow 22/tcp comment 'SSH'
-
-# 允许HTTP
 sudo ufw allow 80/tcp comment 'HTTP'
-
-# 允许HTTPS（可选，如果配置SSL）
 sudo ufw allow 443/tcp comment 'HTTPS'
-
-# 拒绝直接访问内部端口（安全措施）
-sudo ufw deny 8000/tcp comment 'Block direct API access'
-sudo ufw deny 8501/tcp comment 'Block direct Streamlit access'
-```
-
-### 6.3 重新加载防火墙
-
-```bash
+sudo ufw deny 5000/tcp comment 'Block direct Flask'
+sudo ufw deny 8000/tcp comment 'Block direct API'
+sudo ufw deny 8501/tcp comment 'Block direct Streamlit'
+sudo ufw enable
 sudo ufw reload
 ```
 
-### 6.4 验证防火墙规则
-
-```bash
-sudo ufw status numbered
-```
-
-应显示：
-```
-Status: active
-
-     To                         Action      From
-     --                         ------      ----
-[ 1] 22/tcp                     ALLOW IN    Anywhere                   # SSH
-[ 2] 80/tcp                     ALLOW IN    Anywhere                   # HTTP
-[ 3] 443/tcp                    ALLOW IN    Anywhere                   # HTTPS
-[ 4] 8000/tcp                   DENY IN     Anywhere                   # Block direct API access
-[ 5] 8501/tcp                   DENY IN     Anywhere                   # Block direct Streamlit access
-```
-
 ---
 
-## 第七步：验证部署
-
-### 7.1 检查服务状态
+## SSL (Opcional)
 
 ```bash
-# 检查Nginx
-sudo systemctl status nginx
-
-# 检查InformePT服务
-sudo systemctl status informept-api.service
-sudo systemctl status streamlit-informept.service
-```
-
-### 7.2 检查端口监听
-
-```bash
-sudo netstat -tlnp | grep -E ':(80|8000|8501) '
-```
-
-或：
-
-```bash
-sudo ss -tlnp | grep -E ':(80|8000|8501) '
-```
-
-应显示：
-```
-tcp   LISTEN 0  511  0.0.0.0:80     0.0.0.0:*   users:(("nginx",...))
-tcp   LISTEN 0  ...  127.0.0.1:8000 0.0.0.0:*   users:(("uvicorn",...))
-tcp   LISTEN 0  ...  127.0.0.1:8501 0.0.0.0:*   users:(("streamlit",...))
-```
-
-### 7.3 从服务器本地测试
-
-```bash
-# 测试Portal主页
-curl http://localhost/
-
-# 测试健康检查
-curl http://localhost/health
-
-# 测试API
-curl http://localhost/api/
-
-# 测试Streamlit（会返回HTML）
-curl http://localhost/app/ | head -20
-```
-
-### 7.4 从外部测试
-
-在浏览器中访问：
-
-| URL | 预期结果 |
-|-----|----------|
-| http://80.225.186.223/ | Portal主页 |
-| http://80.225.186.223/app/ | Streamlit应用 |
-| http://80.225.186.223/api/docs | API文档 |
-| http://80.225.186.223/health | "Portal OK" |
-
----
-
-## 第八步：配置开机自启
-
-### 8.1 启用Nginx开机自启
-
-```bash
-sudo systemctl enable nginx
-```
-
-### 8.2 确认InformePT服务开机自启
-
-```bash
-sudo systemctl is-enabled informept-api.service
-sudo systemctl is-enabled streamlit-informept.service
-```
-
-如果显示 `disabled`，启用它们：
-
-```bash
-sudo systemctl enable informept-api.service
-sudo systemctl enable streamlit-informept.service
-```
-
----
-
-## 可选：SSL证书配置
-
-### 使用Let's Encrypt（需要域名）
-
-```bash
-# 安装Certbot
 sudo apt install -y certbot python3-certbot-nginx
-
-# 获取证书（替换为您的域名）
-sudo certbot --nginx -d your-domain.com
-
-# 自动续期测试
+sudo certbot --nginx -d tu-dominio.com
 sudo certbot renew --dry-run
 ```
 
-### 使用自签名证书（仅用于测试）
-
-```bash
-# 生成自签名证书
-sudo openssl req -x509 -nodes -days 365 -newkey rsa:2048 \
-  -keyout /etc/ssl/private/portal-selfsigned.key \
-  -out /etc/ssl/certs/portal-selfsigned.crt \
-  -subj "/C=US/ST=State/L=City/O=Organization/CN=80.225.186.223"
-```
-
-然后更新Nginx配置添加HTTPS支持。
+Después de activar HTTPS, establecer `PORTAL_HTTPS=true` en el servicio.
 
 ---
 
-## 日志管理
+## Gestión de Logs
 
-### 日志位置
-
-| 日志类型 | 位置 |
-|----------|------|
-| Nginx访问日志 | /var/log/nginx/portal_access.log |
-| Nginx错误日志 | /var/log/nginx/portal_error.log |
-| API服务日志 | `journalctl -u informept-api.service` |
-| Streamlit服务日志 | `journalctl -u streamlit-informept.service` |
-
-### 查看实时日志
+| Log | Ubicación |
+|-----|-----------|
+| Portal Flask | `sudo journalctl -u portal.service` |
+| Nginx Access | `/var/log/nginx/portal_access.log` |
+| Nginx Error | `/var/log/nginx/portal_error.log` |
+| API | `sudo journalctl -u informept-api.service` |
+| Streamlit | `sudo journalctl -u streamlit-informept.service` |
 
 ```bash
-# Nginx访问日志
+# Ver logs en tiempo real
+sudo journalctl -u portal.service -f
 sudo tail -f /var/log/nginx/portal_access.log
-
-# Nginx错误日志
-sudo tail -f /var/log/nginx/portal_error.log
-
-# API服务日志
-sudo journalctl -u informept-api.service -f
-
-# Streamlit服务日志
-sudo journalctl -u streamlit-informept.service -f
-```
-
-### 配置日志轮转
-
-```bash
-sudo nano /etc/logrotate.d/portal
-```
-
-添加：
-
-```
-/var/log/nginx/portal_*.log {
-    daily
-    rotate 14
-    compress
-    delaycompress
-    notifempty
-    create 0640 www-data adm
-    sharedscripts
-    postrotate
-        [ -f /var/run/nginx.pid ] && kill -USR1 `cat /var/run/nginx.pid`
-    endscript
-}
 ```
 
 ---
 
-## 备份策略
+## Estrategia de Backup
 
-### 手动备份
-
-使用提供的备份脚本：
+### Datos críticos (DATA_DIR)
 
 ```bash
-cd /home/ubuntu/Portal/scripts
-./backup.sh
-```
+# Backup manual
+cp -r /home/rootadmin/data/portal /home/rootadmin/data/portal-backup-$(date +%Y%m%d)
 
-### 自动备份
-
-添加到crontab：
-
-```bash
+# Backup automático (crontab)
 crontab -e
+# Agregar:
+0 2 * * * tar czf /home/rootadmin/backups/portal-$(date +\%Y\%m\%d).tar.gz /home/rootadmin/data/portal
 ```
 
-添加（每天凌晨2点备份）：
+### Archivos del backup
 
-```
-0 2 * * * /home/ubuntu/Portal/scripts/backup.sh
-```
-
-### 备份内容
-
-- Nginx配置文件
-- 服务配置文件
-- Portal静态文件
-- 应用数据（如果有）
+- `users.db` — Base de datos de usuarios, tokens, estadísticas
+- `apps_config.json` — Configuración de aplicaciones
 
 ---
 
-## 故障排查
+## Actualización del Portal
 
-### 问题1：无法访问Portal
-
-**排查步骤：**
+### Flujo estándar
 
 ```bash
-# 1. 检查Nginx是否运行
-sudo systemctl status nginx
-
-# 2. 测试Nginx配置
-sudo nginx -t
-
-# 3. 检查端口80是否监听
-sudo netstat -tlnp | grep :80
-
-# 4. 检查防火墙
-sudo ufw status
-
-# 5. 查看Nginx错误日志
-sudo tail -50 /var/log/nginx/error.log
+cd /home/rootadmin/Portal
+git pull origin main
+./scripts/restart-all.sh   # Ejecuta sync + restart
 ```
 
-**解决方案：**
+### Actualización manual paso a paso
 
 ```bash
-# 重启Nginx
+cd /home/rootadmin/Portal
+git pull origin main
+
+# Actualizar dependencias (si cambiaron)
+source portal/venv/bin/activate
+pip install -r portal/requirements.txt
+deactivate
+
+# Sincronizar datos
+./scripts/sync-portal-data.sh
+
+# Reiniciar
+sudo systemctl restart portal.service
 sudo systemctl restart nginx
 ```
 
-### 问题2：应用无响应（502 Bad Gateway）
+---
 
-**排查步骤：**
+## Rollback
+
+### Rollback por git
 
 ```bash
-# 1. 检查后端服务是否运行
-sudo systemctl status informept-api.service
-sudo systemctl status streamlit-informept.service
-
-# 2. 检查端口是否监听
-sudo netstat -tlnp | grep -E ':(8000|8501)'
-
-# 3. 查看服务日志
-sudo journalctl -u informept-api.service -n 50
-sudo journalctl -u streamlit-informept.service -n 50
+cd /home/rootadmin/Portal
+git log --oneline -5  # Ver commits recientes
+git checkout <commit_hash>
+sudo systemctl restart portal.service
 ```
 
-**解决方案：**
+### Rollback de datos
 
 ```bash
-# 重启服务
-sudo systemctl daemon-reload
-sudo systemctl restart informept-api.service
-sudo systemctl restart streamlit-informept.service
+# Restaurar desde backup
+cp /home/rootadmin/data/portal-backup-YYYYMMDD/users.db /home/rootadmin/data/portal/
+cp /home/rootadmin/data/portal-backup-YYYYMMDD/apps_config.json /home/rootadmin/data/portal/
+sudo systemctl restart portal.service
 ```
 
-### 问题3：端口冲突
+> ⚠️ DATA_DIR siempre se preserva a través de actualizaciones git. Los datos nunca se pierden por `git pull`.
 
-**排查步骤：**
+---
+
+## Solución de Problemas
+
+### Portal no carga (502 Bad Gateway)
 
 ```bash
-# 查看端口占用
-sudo lsof -i :80
-sudo lsof -i :8000
-sudo lsof -i :8501
+# 1. Verificar que portal.service está corriendo
+sudo systemctl status portal.service
+sudo journalctl -u portal.service -n 50
+
+# 2. Verificar puerto 5000
+sudo ss -tlnp | grep :5000
+
+# 3. Reiniciar
+sudo systemctl restart portal.service
 ```
 
-**解决方案：**
+### Login no funciona
 
 ```bash
-# 终止占用进程（谨慎使用）
-sudo kill -9 <PID>
+# Verificar DB existe
+ls -la /home/rootadmin/data/portal/users.db
 
-# 重启服务
-sudo systemctl restart nginx
-sudo systemctl restart informept-api.service
-sudo systemctl restart streamlit-informept.service
+# Verificar logs
+sudo journalctl -u portal.service -n 30 | grep -i error
 ```
 
-### 问题4：权限问题
-
-**排查步骤：**
+### Apps no se muestran en dashboard
 
 ```bash
-# 检查文件权限
-ls -la /home/ubuntu/Portal/static/
-ls -la /etc/nginx/sites-available/portal
+# Verificar symlink
+ls -la /home/rootadmin/Portal/portal/apps_config.json
+# Debe apuntar a DATA_DIR
+
+# Verificar JSON válido
+python3 -m json.tool /home/rootadmin/data/portal/apps_config.json
+
+# Verificar que el usuario tiene el departamento correcto
+# (Desde admin panel o directamente en DB)
 ```
 
-**解决方案：**
+### Power Automate email no funciona
 
 ```bash
-# 修复权限
-sudo chown -R ubuntu:ubuntu /home/ubuntu/Portal
-chmod 755 /home/ubuntu/Portal
-chmod 644 /home/ubuntu/Portal/static/index.html
+# Verificar variables de entorno
+sudo systemctl show portal.service | grep -i power
+
+# Verificar logs de intentos
+sudo journalctl -u portal.service | grep -i "power\|automate\|email"
+
+# Probar con curl (ver docs/POWER_AUTOMATE_EMAIL_SETUP.md)
 ```
 
 ---
 
-## 维护命令速查表
+## Referencia Rápida de Comandos
 
-### 服务管理
+```bash
+# Estado completo
+./scripts/check-status.sh
 
-| 操作 | 命令 |
-|------|------|
-| 重启所有服务 | `./scripts/restart-all.sh` |
-| 检查所有服务状态 | `./scripts/check-status.sh` |
-| 重启Nginx | `sudo systemctl restart nginx` |
-| 重启API服务 | `sudo systemctl restart informept-api.service` |
-| 重启Streamlit服务 | `sudo systemctl restart streamlit-informept.service` |
-| 重新加载Nginx配置 | `sudo nginx -t && sudo systemctl reload nginx` |
+# Reiniciar todo (con sincronización)
+./scripts/restart-all.sh
 
-### 日志查看
+# Sincronizar datos solamente
+./scripts/sync-portal-data.sh
 
-| 操作 | 命令 |
-|------|------|
-| Nginx访问日志 | `sudo tail -f /var/log/nginx/portal_access.log` |
-| Nginx错误日志 | `sudo tail -f /var/log/nginx/portal_error.log` |
-| API服务日志 | `sudo journalctl -u informept-api.service -f` |
-| Streamlit服务日志 | `sudo journalctl -u streamlit-informept.service -f` |
+# Despliegue completo
+./scripts/deploy.sh
 
-### 配置管理
+# Ver logs del Portal
+sudo journalctl -u portal.service -f
 
-| 操作 | 命令 |
-|------|------|
-| 编辑Nginx配置 | `sudo nano /etc/nginx/sites-available/portal` |
-| 测试Nginx配置 | `sudo nginx -t` |
-| 备份配置 | `./scripts/backup.sh` |
-| 更新Portal | `git pull origin main && ./scripts/restart-all.sh` |
+# Entrar al virtualenv
+source /home/rootadmin/Portal/portal/venv/bin/activate
+```
 
 ---
 
-## 部署完成检查清单
-
-- [ ] SSH连接到服务器成功
-- [ ] 系统包已更新
-- [ ] 依赖已安装（git, nginx, curl, net-tools, ufw）
-- [ ] Portal仓库已克隆到 `/home/ubuntu/Portal`
-- [ ] Nginx配置已创建并启用
-- [ ] Portal静态页面已创建
-- [ ] 防火墙规则已配置
-- [ ] 所有服务正在运行
-- [ ] 从外部可以访问Portal主页
-- [ ] Streamlit版本可以访问
-- [ ] API版本可以访问
-- [ ] 健康检查端点正常
-- [ ] 开机自启已配置
-- [ ] 日志系统正常
-- [ ] 备份策略已设置
-
----
-
-## 部署完成后的访问地址
-
-| 服务 | URL |
-|------|-----|
-| Portal主页 | http://80.225.186.223/ |
-| Streamlit版本 | http://80.225.186.223/app/ |
-| API版本 | http://80.225.186.223/api/ |
-| API文档 | http://80.225.186.223/api/docs |
-| 健康检查 | http://80.225.186.223/health |
-
----
-
-**文档版本**: 1.0.0
-**最后更新**: 2026-01-13
-**作者**: JimmyYuu29
+**Versión del documento**: 2.0.0
+**Última actualización**: 2025-02-23

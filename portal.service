@@ -1,0 +1,49 @@
+[Unit]
+Description=Portal Forvis Mazars - Flask Application
+After=network.target
+
+[Service]
+Type=simple
+User=rootadmin
+Group=rootadmin
+WorkingDirectory=/home/rootadmin/Portal/portal
+
+# ---- Environment ----
+# SECRET_KEY: Flask session secret (MUST change in production)
+Environment="SECRET_KEY=CHANGE_ME_TO_A_LONG_RANDOM_STRING"
+
+# DATA_DIR: Persistent data directory (users.db, apps_config.json)
+Environment="DATA_DIR=/home/rootadmin/data/portal"
+
+# PORTAL_DOMAIN: Used to build password reset links
+Environment="PORTAL_DOMAIN=http://80.225.186.223"
+
+# Power Automate configuration
+Environment="POWER_AUTOMATE_URL="
+Environment="POWER_AUTOMATE_SHARED_SECRET="
+Environment="POWER_AUTOMATE_TIMEOUT_SECONDS=10"
+Environment="POWER_AUTOMATE_RETRIES=3"
+
+# Flask settings
+Environment="PORTAL_HOST=127.0.0.1"
+Environment="PORTAL_PORT=5000"
+
+# ---- Exec ----
+ExecStart=/home/rootadmin/Portal/portal/venv/bin/gunicorn \
+    --bind 127.0.0.1:5000 \
+    --workers 2 \
+    --timeout 120 \
+    --access-logfile - \
+    --error-logfile - \
+    app:app
+
+Restart=always
+RestartSec=5
+
+# ---- Security ----
+NoNewPrivileges=true
+ProtectSystem=strict
+ReadWritePaths=/home/rootadmin/data/portal /home/rootadmin/Portal
+
+[Install]
+WantedBy=multi-user.target

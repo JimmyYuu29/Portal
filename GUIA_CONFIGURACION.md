@@ -1,21 +1,29 @@
-# Guia de Configuracion del Portal Forvis Mazars
+# Guía de Configuración del Portal Forvis Mazars
 
-Esta guia explica como modificar la interfaz del portal, agregar categorias de servicios y configurar nuevas aplicaciones.
+Esta guía explica cómo modificar la interfaz del portal, agregar categorías de servicios, configurar nuevas aplicaciones y gestionar el control de acceso (RBAC).
 
-## Archivo de Configuracion Principal
+---
 
-Toda la configuracion del portal se encuentra en un unico archivo:
+## Archivo de Configuración Principal
+
+La configuración del portal se gestiona desde un archivo centralizado en el directorio de datos persistente:
 
 ```
-portal/apps_config.json
+DATA_DIR/apps_config.json
 ```
 
-## Estructura del Archivo de Configuracion
+Donde `DATA_DIR` es por defecto `/home/rootadmin/data/portal/`.
+
+> **Nota**: El archivo `portal/apps_config.json` en el repositorio es un **symlink** que apunta a `DATA_DIR/apps_config.json`. Editar cualquiera de los dos edita el mismo archivo.
+
+---
+
+## Estructura del Archivo de Configuración
 
 ```json
 {
   "portal_name": "Forvis Mazars",
-  "portal_description": "Portal de Acceso Unificado para las herramientas de automatizacion",
+  "portal_description": "Portal de Acceso Unificado para las herramientas de automatización",
   "server_ip": "80.225.186.223",
   "categories": [...],
   "apps": [...]
@@ -26,66 +34,43 @@ portal/apps_config.json
 
 ## 1. Modificar el Branding del Portal
 
-### Cambiar el Titulo Principal
-
-Edita el campo `portal_name`:
+### Cambiar el Título Principal
 
 ```json
 "portal_name": "Forvis Mazars"
 ```
 
-### Cambiar la Descripcion/Subtitulo
-
-Edita el campo `portal_description`:
+### Cambiar la Descripción
 
 ```json
-"portal_description": "Portal de Acceso Unificado para las herramientas de automatizacion"
+"portal_description": "Portal de Acceso Unificado para las herramientas de automatización"
 ```
 
 ---
 
-## 2. Agregar Categorias de Servicios
-
-Las categorias agrupan las aplicaciones por departamento o funcion. Cada categoria tiene la siguiente estructura:
+## 2. Agregar Categorías de Servicios
 
 ```json
 {
   "id": "precio-transferencia",
   "name": "Precio de transferencia",
   "icon": "calculator",
-  "description": "Herramientas de automatizacion para el area de Precio de Transferencia"
+  "description": "Herramientas de automatización para el área de Precio de Transferencia"
 }
 ```
 
-### Campos de una Categoria
-
-| Campo | Descripcion | Ejemplo |
+| Campo | Descripción | Ejemplo |
 |-------|-------------|---------|
-| `id` | Identificador unico (sin espacios, minusculas) | `"auditoria"` |
-| `name` | Nombre visible en la interfaz | `"Auditoria"` |
+| `id` | Identificador único (sin espacios, minúsculas) | `"auditoria"` |
+| `name` | Nombre visible en la interfaz | `"Auditoría"` |
 | `icon` | Nombre del icono de Lucide | `"clipboard-check"` |
-| `description` | Descripcion de la categoria | `"Herramientas para..."` |
+| `description` | Descripción de la categoría | `"Herramientas para..."` |
 
-### Ejemplo: Agregar una Nueva Categoria
+### Categorías Predefinidas
 
-Para agregar la categoria "Recursos Humanos", anade este objeto al array `categories`:
-
-```json
-{
-  "id": "recursos-humanos",
-  "name": "Recursos Humanos",
-  "icon": "users",
-  "description": "Herramientas de automatizacion para el area de Recursos Humanos"
-}
-```
-
-### Categorias Predefinidas
-
-El portal incluye las siguientes categorias:
-
-- `precio-transferencia` - Precio de transferencia
-- `auditoria` - Auditoria
-- `administracion` - Administracion
+- `precio-transferencia` - Precio de Transferencia
+- `auditoria` - Auditoría
+- `administracion` - Administración
 - `general` - General
 - `otros` - Otros
 
@@ -93,14 +78,12 @@ El portal incluye las siguientes categorias:
 
 ## 3. Agregar Servicios/Aplicaciones
 
-Cada aplicacion se define en el array `apps` con la siguiente estructura:
-
 ```json
 {
   "id": "mi-aplicacion",
-  "name": "Mi Aplicacion",
+  "name": "Mi Aplicación",
   "name_en": "My Application",
-  "description": "Descripcion detallada de la aplicacion...",
+  "description": "Descripción detallada de la aplicación...",
   "category": "precio-transferencia",
   "url": "/mi-app/",
   "icon": "bar-chart-2",
@@ -108,282 +91,175 @@ Cada aplicacion se define en el array `apps` con la siguiente estructura:
   "version": "1.0.0",
   "maintainer": "Equipo de Desarrollo",
   "tags": ["etiqueta1", "etiqueta2"],
-  "port": 8080
+  "port": 8080,
+  "access": {
+    "departments": ["precio_transferencia"],
+    "roles": ["senior", "manager", "socio"]
+  }
 }
 ```
 
-### Campos de una Aplicacion
+### Campos de una Aplicación
 
-| Campo | Requerido | Descripcion | Ejemplo |
+| Campo | Requerido | Descripción | Ejemplo |
 |-------|-----------|-------------|---------|
-| `id` | Si | Identificador unico | `"mi-app"` |
-| `name` | Si | Nombre en espanol | `"Mi Aplicacion"` |
-| `name_en` | No | Nombre en ingles | `"My Application"` |
-| `description` | Si | Descripcion detallada | `"Esta aplicacion..."` |
-| `category` | Si | ID de la categoria | `"auditoria"` |
-| `url` | Si | Ruta de acceso | `"/mi-app/"` |
-| `icon` | Si | Nombre del icono de Lucide | `"file-text"` |
+| `id` | Sí | Identificador único | `"mi-app"` |
+| `name` | Sí | Nombre en español | `"Mi Aplicación"` |
+| `name_en` | No | Nombre en inglés | `"My Application"` |
+| `description` | Sí | Descripción detallada | `"Esta aplicación..."` |
+| `category` | Sí | ID de la categoría | `"auditoria"` |
+| `url` | Sí | Ruta de acceso | `"/mi-app/"` |
+| `icon` | Sí | Nombre del icono de Lucide | `"file-text"` |
 | `enabled` | No | Activar/desactivar (default: true) | `true` |
-| `version` | No | Version de la aplicacion | `"1.0.0"` |
+| `version` | No | Versión de la aplicación | `"1.0.0"` |
 | `maintainer` | No | Responsable del servicio | `"Equipo X"` |
 | `tags` | No | Etiquetas para filtrado | `["api", "web"]` |
 | `port` | No | Puerto del servicio | `8080` |
-
-### Ejemplo: Agregar una Nueva Aplicacion
-
-Para agregar una aplicacion de auditoria:
-
-```json
-{
-  "id": "auditoria-automatizada",
-  "name": "Auditoria Automatizada",
-  "name_en": "Automated Audit",
-  "description": "Sistema de auditoria automatizada para revision de documentos y cumplimiento normativo.",
-  "category": "auditoria",
-  "url": "/auditoria/",
-  "icon": "clipboard-check",
-  "enabled": true,
-  "version": "1.0.0",
-  "maintainer": "Equipo de Auditoria",
-  "tags": ["auditoria", "cumplimiento", "automatizacion"],
-  "port": 8502
-}
-```
+| **`access`** | **No** | **Control de acceso RBAC (nuevo v2.0)** | **Ver abajo** |
 
 ---
 
-## 4. Iconos Disponibles (Lucide Icons)
+## 4. Control de Acceso RBAC (Nuevo en v2.0)
 
-El portal utiliza la biblioteca **Lucide Icons**. A continuacion se presenta una lista de iconos recomendados organizados por categoria:
+### Campo `access`
 
-### Iconos de Graficos y Analisis
+Cada aplicación puede tener un campo `access` para restringir quién puede verla y usarla:
 
-| Nombre del Icono | Descripcion |
-|------------------|-------------|
-| `bar-chart` | Grafico de barras |
-| `bar-chart-2` | Grafico de barras horizontal |
-| `bar-chart-3` | Grafico de barras con linea |
-| `bar-chart-4` | Grafico de barras vertical |
-| `line-chart` | Grafico de lineas |
-| `pie-chart` | Grafico circular |
-| `area-chart` | Grafico de area |
-| `trending-up` | Tendencia al alza |
-| `trending-down` | Tendencia a la baja |
-| `activity` | Actividad/pulso |
+```json
+"access": {
+  "departments": ["precio_transferencia", "it"],
+  "roles": ["senior", "manager", "socio"]
+}
+```
 
-### Iconos de Documentos y Archivos
+**Reglas:**
+- Si `departments` está **vacío** o **ausente** → todos los departamentos pueden acceder
+- Si `roles` está **vacío** o **ausente** → todos los roles pueden acceder
+- Si ambos están presentes → el usuario debe cumplir **ambas** condiciones
+- Los **administradores** siempre ven todas las aplicaciones
 
-| Nombre del Icono | Descripcion |
-|------------------|-------------|
-| `file` | Archivo generico |
-| `file-text` | Documento de texto |
-| `file-spreadsheet` | Hoja de calculo |
-| `file-chart` | Archivo con grafico |
-| `file-check` | Archivo verificado |
-| `file-search` | Busqueda de archivo |
-| `files` | Multiples archivos |
-| `folder` | Carpeta |
-| `folder-open` | Carpeta abierta |
-| `clipboard` | Portapapeles |
-| `clipboard-check` | Portapapeles verificado |
-| `clipboard-list` | Lista de tareas |
+### Departamentos Internos (IDs)
 
-### Iconos de Finanzas y Negocios
+Estos son los identificadores internos que se usan en el campo `departments[]`:
 
-| Nombre del Icono | Descripcion |
-|------------------|-------------|
-| `calculator` | Calculadora |
-| `coins` | Monedas |
-| `credit-card` | Tarjeta de credito |
-| `dollar-sign` | Signo de dolar |
-| `euro` | Euro |
-| `wallet` | Cartera |
-| `receipt` | Recibo |
-| `banknote` | Billete |
-| `piggy-bank` | Alcancia |
-| `landmark` | Banco/edificio financiero |
-| `briefcase` | Maletin |
-| `building` | Edificio |
-| `building-2` | Edificio alternativo |
+| ID Interno | Nombre en Pantalla |
+|------------|-------------------|
+| `auditoria` | Auditoría |
+| `precio_transferencia` | Precio de Transferencia |
+| `tax` | Tax |
+| `legal` | Legal |
+| `administracion_finanza` | Administración y Finanza |
+| `it` | IT |
+| `quality_risk` | Quality & Risk Management |
+| `aos` | AOS |
+| `otros` | Otros |
 
-### Iconos de Usuarios y Personas
+> ⚠️ **Importante**: Usar siempre el ID interno (columna izquierda) en la configuración, no el nombre en pantalla.
 
-| Nombre del Icono | Descripcion |
-|------------------|-------------|
-| `user` | Usuario individual |
-| `users` | Grupo de usuarios |
-| `user-check` | Usuario verificado |
-| `user-plus` | Agregar usuario |
-| `user-cog` | Configuracion de usuario |
-| `contact` | Contacto |
-| `contact-2` | Contacto alternativo |
+### Roles Internos (IDs)
 
-### Iconos de Tecnologia y Desarrollo
+| ID Interno | Nombre en Pantalla |
+|------------|-------------------|
+| `junior` | Junior |
+| `senior` | Senior |
+| `manager` | Manager |
+| `socio` | Socio |
 
-| Nombre del Icono | Descripcion |
-|------------------|-------------|
-| `code` | Codigo |
-| `code-2` | Codigo alternativo |
-| `terminal` | Terminal |
-| `database` | Base de datos |
-| `server` | Servidor |
-| `cloud` | Nube |
-| `cpu` | Procesador |
-| `hard-drive` | Disco duro |
-| `wifi` | Conexion wifi |
-| `globe` | Globo/internet |
-| `api` | API (no disponible, usar `zap`) |
-| `zap` | Rayo/velocidad (recomendado para APIs) |
+### Ejemplos de Acceso
 
-### Iconos de Interfaz y Navegacion
+#### App solo para Precio de Transferencia (todos los roles)
 
-| Nombre del Icono | Descripcion |
-|------------------|-------------|
-| `layout-dashboard` | Panel de control |
-| `layout-grid` | Cuadricula |
-| `layout-list` | Lista |
-| `menu` | Menu |
-| `home` | Inicio |
-| `settings` | Configuracion |
-| `settings-2` | Configuracion alternativa |
-| `sliders` | Controles deslizantes |
-| `search` | Busqueda |
-| `filter` | Filtro |
+```json
+"access": {
+  "departments": ["precio_transferencia"],
+  "roles": []
+}
+```
 
-### Iconos de Estado y Acciones
+#### App para seniors y superiores de IT y Auditoría
 
-| Nombre del Icono | Descripcion |
-|------------------|-------------|
-| `check` | Verificado |
-| `check-circle` | Circulo verificado |
-| `check-square` | Cuadrado verificado |
-| `x` | Cerrar/cancelar |
-| `x-circle` | Circulo con X |
-| `alert-circle` | Alerta circular |
-| `alert-triangle` | Alerta triangular |
-| `info` | Informacion |
-| `help-circle` | Ayuda |
-| `shield` | Escudo |
-| `shield-check` | Escudo verificado |
-| `lock` | Candado |
-| `unlock` | Candado abierto |
+```json
+"access": {
+  "departments": ["it", "auditoria"],
+  "roles": ["senior", "manager", "socio"]
+}
+```
 
-### Iconos de Comunicacion
+#### App para todos (sin restricción)
 
-| Nombre del Icono | Descripcion |
-|------------------|-------------|
-| `mail` | Correo |
-| `message-square` | Mensaje |
-| `message-circle` | Mensaje circular |
-| `phone` | Telefono |
-| `send` | Enviar |
-| `share` | Compartir |
-| `share-2` | Compartir alternativo |
-| `link` | Enlace |
-| `external-link` | Enlace externo |
+```json
+"access": {
+  "departments": [],
+  "roles": []
+}
+```
 
-### Iconos de Tiempo y Calendario
+O simplemente omitir el campo `access`.
 
-| Nombre del Icono | Descripcion |
-|------------------|-------------|
-| `calendar` | Calendario |
-| `calendar-check` | Calendario con marca |
-| `calendar-days` | Dias del calendario |
-| `clock` | Reloj |
-| `timer` | Temporizador |
-| `history` | Historial |
-| `refresh-cw` | Actualizar |
+---
 
-### Iconos Recomendados por Departamento
+## 5. Compatibilidad hacia Atrás
+
+Las aplicaciones que **no tengan** el campo `access` seguirán siendo visibles para todos los usuarios. Esto asegura compatibilidad con configuraciones anteriores a v2.0.
+
+---
+
+## 6. Iconos Disponibles (Lucide Icons)
+
+El portal utiliza la biblioteca **Lucide Icons**: [https://lucide.dev/icons/](https://lucide.dev/icons/)
 
 | Departamento | Iconos Sugeridos |
 |--------------|------------------|
 | Precio de Transferencia | `calculator`, `file-spreadsheet`, `trending-up` |
-| Auditoria | `clipboard-check`, `file-search`, `shield-check` |
-| Administracion | `building-2`, `briefcase`, `settings` |
-| Recursos Humanos | `users`, `user-check`, `contact` |
-| Tecnologia | `server`, `database`, `code` |
-| Finanzas | `coins`, `banknote`, `landmark` |
-| Legal | `scale`, `file-text`, `shield` |
+| Auditoría | `clipboard-check`, `file-search`, `shield-check` |
+| Administración | `building-2`, `briefcase`, `settings` |
 | General | `briefcase`, `layout-dashboard`, `grid` |
 
 ---
 
-## 5. Referencia Completa de Iconos
+## 7. Aplicar Cambios
 
-Para ver la lista completa de iconos disponibles, visita:
+Después de modificar `apps_config.json`:
 
-**https://lucide.dev/icons/**
+```bash
+# Reiniciar el servicio del Portal
+sudo systemctl restart portal.service
 
-En esta pagina puedes:
-- Buscar iconos por nombre
-- Ver la vista previa de cada icono
-- Copiar el nombre del icono directamente
+# O reiniciar todo
+./scripts/restart-all.sh
+```
+
+> Como `apps_config.json` está en DATA_DIR (a través de symlink), los cambios sobreviven `git pull`.
 
 ---
 
-## 6. Ejemplo de Configuracion Completa
+## 8. Validación
 
-```json
-{
-  "portal_name": "Forvis Mazars",
-  "portal_description": "Portal de Acceso Unificado para las herramientas de automatizacion",
-  "server_ip": "80.225.186.223",
-  "categories": [
-    {
-      "id": "precio-transferencia",
-      "name": "Precio de transferencia",
-      "icon": "calculator",
-      "description": "Herramientas para el area de Precio de Transferencia"
-    },
-    {
-      "id": "auditoria",
-      "name": "Auditoria",
-      "icon": "clipboard-check",
-      "description": "Herramientas para el area de Auditoria"
-    }
-  ],
-  "apps": [
-    {
-      "id": "informept-streamlit",
-      "name": "InformePT Streamlit",
-      "description": "Aplicacion web interactiva...",
-      "category": "precio-transferencia",
-      "url": "/app/",
-      "icon": "bar-chart-2",
-      "enabled": true,
-      "tags": ["streamlit", "web"]
-    },
-    {
-      "id": "auditoria-app",
-      "name": "Auditoria App",
-      "description": "Sistema de auditoria...",
-      "category": "auditoria",
-      "url": "/auditoria/",
-      "icon": "clipboard-check",
-      "enabled": true,
-      "tags": ["auditoria"]
-    }
-  ]
-}
+```bash
+# Verificar JSON válido
+python3 -m json.tool /home/rootadmin/data/portal/apps_config.json
+
+# Verificar symlink activo
+ls -la /home/rootadmin/Portal/portal/apps_config.json
 ```
 
 ---
 
-## 7. Notas Importantes
+## 9. Notas Importantes
 
-1. **Reinicio del Servicio**: Despues de modificar `apps_config.json`, es necesario reiniciar el servicio del portal para que los cambios surtan efecto.
-
-2. **Validacion JSON**: Asegurate de que el archivo JSON sea valido. Puedes usar herramientas como [JSONLint](https://jsonlint.com/) para validar la sintaxis.
-
-3. **IDs Unicos**: Los campos `id` tanto de categorias como de aplicaciones deben ser unicos y no contener espacios ni caracteres especiales.
-
-4. **Categorias Vacias**: Las categorias sin aplicaciones asignadas no se mostraran en la interfaz automaticamente.
-
-5. **Pagina de Respaldo**: Si necesitas modificar la pagina estatica de respaldo, edita tambien el archivo `static/index.html`.
+1. **Las categorías vacías** (sin apps asignadas) no se muestran en la interfaz.
+2. **IDs únicos**: Tanto categorías como aplicaciones deben tener `id` únicos.
+3. **IDs de departamento**: Usar siempre los IDs internos (sin espacios, sin tildes).
+4. **Control de acceso retroactivo**: Al agregar `access` a una app existente, solo los usuarios con el departamento/rol correcto podrán verla.
+5. **Admins**: Los usuarios con `is_admin=1` ven todas las apps independientemente de `access`.
 
 ---
 
-## 8. Soporte
+## 10. Soporte
 
-Para consultas adicionales o soporte tecnico, contacta al equipo de desarrollo.
+Para consultas adicionales o soporte técnico, contacta al equipo de desarrollo.
+
+---
+
+**Versión del documento**: 2.0.0
+**Última actualización**: 2025-02-23

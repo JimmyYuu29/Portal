@@ -8,7 +8,7 @@ Despliegue del Portal en menos de 10 minutos.
 
 | Ítem | Valor |
 |------|-------|
-| **IP Servidor** | 80.225.186.223 |
+| **IP Servidor** | 10.32.1.150 |
 | **Portal** | /home/rootadmin/Portal |
 | **DATA_DIR** | /home/rootadmin/data/portal |
 | **Puerto Portal** | 5000 (Flask/gunicorn) |
@@ -22,7 +22,7 @@ Despliegue del Portal en menos de 10 minutos.
 ### Paso 1: Conectar al servidor
 
 ```bash
-ssh rootadmin@80.225.186.223
+ssh rootadmin@10.32.1.150
 ```
 
 ### Paso 2: Clonar el repositorio
@@ -72,7 +72,7 @@ sudo systemctl restart portal.service
 
 ### Paso 5: Iniciar sesión como Admin
 
-1. Abrir: http://80.225.186.223/login
+1. Abrir: http://10.32.1.150/login
 2. **Username**: `Admin`
 3. **Password**: `Admin123`
 4. ⚠️ Cambiar la contraseña inmediatamente desde el dashboard
@@ -93,13 +93,13 @@ Al primer arranque, el Portal:
 
 | Servicio | URL |
 |----------|-----|
-| **Login** | http://80.225.186.223/login |
-| **Dashboard** | http://80.225.186.223/dashboard |
-| **Admin Panel** | http://80.225.186.223/admin |
-| **Streamlit** | http://80.225.186.223/app/ |
-| **API** | http://80.225.186.223/api/ |
-| **API Docs** | http://80.225.186.223/api/docs |
-| **Health** | http://80.225.186.223/health |
+| **Login** | http://10.32.1.150/login |
+| **Dashboard** | http://10.32.1.150/dashboard |
+| **Admin Panel** | http://10.32.1.150/admin |
+| **Streamlit** | http://10.32.1.150/app/ |
+| **API** | http://10.32.1.150/api/ |
+| **API Docs** | http://10.32.1.150/api/docs |
+| **Health** | http://10.32.1.150/health |
 
 ---
 

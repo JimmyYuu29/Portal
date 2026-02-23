@@ -9,7 +9,7 @@ WorkingDirectory=/home/rootadmin/portal-suite/Portal
 Environment=PATH=/home/rootadmin/portal-suite/Portal/venv/bin:/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin:/sbin:/bin
 Environment="SECRET_KEY=CHANGE_ME_TO_A_LONG_RANDOM_STRING"
 Environment="DATA_DIR=/home/rootadmin/data/portal"
-Environment="PORTAL_DOMAIN=http://80.225.186.223"
+Environment="PORTAL_DOMAIN=http://10.32.1.150/"
 Environment="POWER_AUTOMATE_URL="
 Environment="POWER_AUTOMATE_SHARED_SECRET="
 ExecStart=/home/rootadmin/portal-suite/Portal/venv/bin/python portal/app.py

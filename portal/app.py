@@ -33,11 +33,11 @@ from flask_login import (
 )
 from werkzeug.security import generate_password_hash, check_password_hash
 
-from portal.models import (
+from models import (
     get_db, close_db, init_db,
     DEPARTMENTS, DEPARTMENT_CHOICES, ROLES, ROLE_CHOICES,
 )
-from portal.power_automate_client import PowerAutomateClient
+from power_automate_client import PowerAutomateClient
 
 # ============================================================
 # App Factory-style Initialization

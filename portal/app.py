@@ -421,38 +421,55 @@ def forgot_password():
     if request.method == 'POST':
         username = request.form.get('username', '').strip()
 
-        # Always show same message (anti-enumeration)
-        flash_msg = 'Si la cuenta existe, recibirás un correo con instrucciones en unos minutos.'
+        if not username:
+            flash('Por favor, ingresa tu cuenta corporativa.', 'warning')
+            return redirect(url_for('forgot_password'))
 
         db = get_db()
         row = db.execute("SELECT * FROM users WHERE username = ? AND enabled = 1", (username,)).fetchone()
-        if row:
-            # Generate one-time token
-            token = secrets.token_urlsafe(48)
-            expires = datetime.utcnow() + timedelta(minutes=30)
-            db.execute(
-                "INSERT INTO password_reset_tokens (user_id, token, expires_at) VALUES (?, ?, ?)",
-                (row['id'], token, expires)
+        if not row:
+            flash(f'⚠️ No se encontró la cuenta: {username}', 'danger')
+            return redirect(url_for('forgot_password'))
+
+        # Generate one-time token
+        token = secrets.token_urlsafe(48)
+        expires = datetime.utcnow() + timedelta(minutes=30)
+        db.execute(
+            "INSERT INTO password_reset_tokens (user_id, token, expires_at) VALUES (?, ?, ?)",
+            (row['id'], token, expires)
+        )
+        db.commit()
+
+        # Build reset link
+        reset_link = f"{PORTAL_DOMAIN}/reset-password/{token}"
+
+        # Determine email recipient
+        email_to = username  # In corporate env, username IS the corporate account/email
+
+        # Send via Power Automate
+        email_sent = pa_client.send_password_reset_email(
+            to=email_to,
+            username=username,
+            reset_link=reset_link,
+            request_ip=request.remote_addr or '0.0.0.0',
+            expires_minutes=30,
+        )
+        log_audit('FORGOT_PASSWORD_REQUEST', username=username)
+
+        if email_sent:
+            flash(f'✅ Correo enviado exitosamente a: {email_to}. Revisa tu bandeja de entrada.', 'success')
+        else:
+            # Show debug info for troubleshooting
+            flow_url_preview = pa_client.flow_url[:50] + '...' if pa_client.flow_url else 'NO CONFIGURADO'
+            secret_status = 'Configurado' if pa_client.shared_secret else 'NO CONFIGURADO'
+            flash(
+                f'❌ Error al enviar el correo. '
+                f'Flow URL: {flow_url_preview} | '
+                f'Secret: {secret_status}. '
+                f'Revisa los logs del servidor: sudo journalctl -u portal.service -n 50',
+                'danger'
             )
-            db.commit()
 
-            # Build reset link
-            reset_link = f"{PORTAL_DOMAIN}/reset-password/{token}"
-
-            # Determine email recipient
-            email_to = username  # In corporate env, username IS the corporate account/email
-
-            # Send via Power Automate
-            pa_client.send_password_reset_email(
-                to=email_to,
-                username=username,
-                reset_link=reset_link,
-                request_ip=request.remote_addr or '0.0.0.0',
-                expires_minutes=30,
-            )
-            log_audit('FORGOT_PASSWORD_REQUEST', username=username)
-
-        flash(flash_msg, 'info')
         return redirect(url_for('forgot_password'))
 
     return render_template('forgot_password.html')

@@ -229,24 +229,62 @@ El archivo `portal.service` usa gunicorn con 2 workers en el puerto 5000.
 
 ## Paso 8: Configurar Variables de Entorno
 
-### Método recomendado: systemd override
+### Método recomendado: EnvironmentFile
 
+> ⚠️ **ADVERTENCIA: NO uses `Environment=` directamente en el archivo systemd para URLs que contengan `%`.**
+>
+> systemd interpreta `%` como un specifier (ej. `%2F` se lee como specifier `2F`).
+> Esto causa que la variable sea descartada silenciosamente, resultando en `POWER_AUTOMATE_URL` vacío.
+>
+> **Solución**: Usar `EnvironmentFile` que no interpreta `%`.
+
+#### Paso 8.1: Crear archivo de variables
+
+```bash
+sudo tee /home/rootadmin/portal-suite/portal.env << 'EOF'
+SECRET_KEY=GENERA-UNA-CLAVE-SECRETA-LARGA-AQUI
+DATA_DIR=/home/rootadmin/data/portal
+PORTAL_DOMAIN=http://10.32.1.150
+POWER_AUTOMATE_URL=https://prod-XX.westeurope.logic.azure.com:443/workflows/...
+POWER_AUTOMATE_SHARED_SECRET=tu-secreto-compartido-aqui
+POWER_AUTOMATE_TIMEOUT_SECONDS=10
+POWER_AUTOMATE_RETRIES=3
+EOF
+
+# Proteger el archivo (solo root puede leer)
+sudo chmod 600 /home/rootadmin/portal-suite/portal.env
+```
+
+> **Nota**: En el archivo `.env`, las URLs con `%` se escriben tal cual, sin comillas ni escape.
+
+#### Paso 8.2: Configurar systemd
+
+Editar el servicio:
 ```bash
 sudo systemctl edit portal.service
 ```
 
-Agregar las variables secretas:
-
+Agregar:
 ```ini
 [Service]
-Environment="SECRET_KEY=GENERA-UNA-CLAVE-SECRETA-LARGA-AQUI"
-Environment="POWER_AUTOMATE_URL=https://prod-XX.westeurope.logic.azure.com:443/workflows/..."
-Environment="POWER_AUTOMATE_SHARED_SECRET=tu-secreto-compartido-aqui"
+EnvironmentFile=/home/rootadmin/portal-suite/portal.env
 ```
 
 ```bash
 sudo systemctl daemon-reload
 ```
+
+#### Paso 8.3: Verificar que las variables se cargaron
+
+```bash
+# Iniciar el servicio
+sudo systemctl start portal.service
+
+# Verificar variables en el proceso
+sudo cat /proc/$(systemctl show -p MainPID portal.service --value)/environ | tr '\0' '\n' | grep POWER_AUTOMATE
+```
+
+Deberías ver la URL completa sin truncamiento.
 
 ### Variables disponibles
 

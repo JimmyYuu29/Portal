@@ -196,10 +196,13 @@ class PowerAutomateClient:
       </p>
       <div style="text-align: center; margin: 28px 0;">
         <a href="{reset_link}"
-           style="display: inline-block; background: linear-gradient(135deg, #1e40af, #3b82f6);
+           style="display: inline-block; background-color: #1e40af;
                   color: #ffffff; text-decoration: none; padding: 14px 36px; border-radius: 8px;
-                  font-size: 15px; font-weight: 600;">
-          Restablecer mi contraseña
+                  font-size: 15px; font-weight: 600; border: 2px solid #1e3a8a;
+                  mso-padding-alt: 0; text-align: center;">
+          <!--[if mso]><i style="letter-spacing: 36px; mso-font-width: -100%; mso-text-raise: 21pt;">&nbsp;</i><![endif]-->
+          <span style="mso-text-raise: 10pt; color: #ffffff;">Restablecer mi contraseña</span>
+          <!--[if mso]><i style="letter-spacing: 36px; mso-font-width: -100%;">&nbsp;</i><![endif]-->
         </a>
       </div>
       <p style="color: #666; font-size: 13px; line-height: 1.6;">

@@ -390,14 +390,34 @@ POWER_AUTOMATE_TIMEOUT_SECONDS=10
 POWER_AUTOMATE_RETRIES=3
 ```
 
-### systemd (edit secrets)
+### systemd (EnvironmentFile — recommended)
+
+> ⚠️ **Do NOT use `Environment=` directly in systemd unit files for URLs containing `%`.**
+> systemd interprets `%` as a specifier, which silently discards the variable.
+> Always use `EnvironmentFile` instead.
 
 ```bash
+# Create env file (% characters are NOT interpreted here)
+sudo tee /home/rootadmin/portal-suite/portal.env << 'EOF'
+POWER_AUTOMATE_URL=https://prod-XX.westeurope.logic.azure.com:443/workflows/...
+POWER_AUTOMATE_SHARED_SECRET=your_long_random_secret
+SECRET_KEY=your_flask_secret_key
+DATA_DIR=/home/rootadmin/data/portal
+PORTAL_DOMAIN=http://10.32.1.150
+EOF
+
+sudo chmod 600 /home/rootadmin/portal-suite/portal.env
+
+# Add to systemd:
 sudo systemctl edit portal.service
-# Add:
 # [Service]
-# Environment="POWER_AUTOMATE_URL=https://prod-XX.westeurope.logic.azure.com:443/workflows/..."
-# Environment="POWER_AUTOMATE_SHARED_SECRET=your_long_random_secret"
+# EnvironmentFile=/home/rootadmin/portal-suite/portal.env
+
+sudo systemctl daemon-reload
+sudo systemctl restart portal.service
+
+# Verify:
+sudo cat /proc/$(systemctl show -p MainPID portal.service --value)/environ | tr '\0' '\n' | grep POWER_AUTOMATE
 ```
 
 ### Flow Summary
@@ -413,4 +433,4 @@ sudo systemctl edit portal.service
 
 ---
 
-*Document Version: 2.0.0 | Last Updated: February 2025*
+*Document Version: 2.1.0 | Last Updated: February 2026*

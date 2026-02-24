@@ -51,23 +51,46 @@ El script automáticamente:
 
 ### Paso 4: Configurar secretos (IMPORTANTE)
 
+> ⚠️ **IMPORTANTE**: NO uses `Environment=` en el archivo systemd para URLs largas con caracteres `%`.
+> systemd interpreta `%` como un specifier y truncará/descartará el valor silenciosamente.
+> Usa **EnvironmentFile** en su lugar (ver abajo).
+
+#### Crear archivo de variables de entorno
+
 ```bash
-# Editar los secretos del servicio
+sudo tee /home/rootadmin/portal-suite/portal.env << 'EOF'
+SECRET_KEY=tu-clave-secreta-larga-aleatoria
+DATA_DIR=/home/rootadmin/data/portal
+PORTAL_DOMAIN=http://10.32.1.150
+POWER_AUTOMATE_URL=https://prod-XX.logic.azure.com/workflows/...
+POWER_AUTOMATE_SHARED_SECRET=tu-secreto-compartido
+EOF
+```
+
+> En el archivo `.env`, las URLs con `%` se escriben tal cual, sin comillas ni escape.
+
+#### Configurar systemd para usar EnvironmentFile
+
+```bash
 sudo systemctl edit portal.service
 ```
 
 Agregar:
 ```ini
 [Service]
-Environment="SECRET_KEY=tu-clave-secreta-larga-aleatoria"
-Environment="POWER_AUTOMATE_URL=https://prod-XX.logic.azure.com/workflows/..."
-Environment="POWER_AUTOMATE_SHARED_SECRET=tu-secreto-compartido"
+EnvironmentFile=/home/rootadmin/portal-suite/portal.env
 ```
 
 Luego:
 ```bash
 sudo systemctl daemon-reload
 sudo systemctl restart portal.service
+```
+
+#### Verificar que las variables se cargaron correctamente
+
+```bash
+sudo cat /proc/$(systemctl show -p MainPID portal.service --value)/environ | tr '\0' '\n' | grep POWER_AUTOMATE
 ```
 
 ### Paso 5: Iniciar sesión como Admin
@@ -187,4 +210,4 @@ ls -la /home/rootadmin/data/portal/
 
 **Tiempo estimado**: < 10 minutos
 **Dificultad**: Sencillo
-**Última actualización**: 2025-02-23
+**Última actualización**: 2026-02-24

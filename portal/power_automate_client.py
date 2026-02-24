@@ -75,11 +75,21 @@ class PowerAutomateClient:
             logger.error("POWER_AUTOMATE_URL is not configured. Cannot send email.")
             return False
 
+        if not self.shared_secret:
+            logger.error("POWER_AUTOMATE_SHARED_SECRET is not configured. Cannot send email.")
+            return False
+
         ts = str(int(time.time()))
         template = "PASSWORD_RESET"
 
-        # Build signature
-        sig = self._compute_signature(to, ts, template)
+        # Build signature — use HMAC when Flow supports it,
+        # otherwise send the shared_secret directly for simple comparison.
+        use_hmac = os.environ.get('POWER_AUTOMATE_USE_HMAC', 'false').lower() == 'true'
+        if use_hmac:
+            sig = self._compute_signature(to, ts, template)
+        else:
+            # Simple mode: send shared secret directly for Flow condition comparison
+            sig = self.shared_secret
 
         # Build body HTML (Spanish)
         body_html = self._build_reset_email_html(
@@ -106,6 +116,14 @@ class PowerAutomateClient:
             },
         }
 
+        # Log the request for debugging (mask secrets)
+        logger.info(
+            "Sending Power Automate request: url=%s..., to=%s, template=%s",
+            self.flow_url[:60] if self.flow_url else 'NOT SET',
+            to,
+            template,
+        )
+
         # Retry with exponential backoff
         for attempt in range(1, self.retries + 1):
             try:
@@ -123,9 +141,10 @@ class PowerAutomateClient:
                     return True
                 else:
                     logger.warning(
-                        "Power Automate returned HTTP %d on attempt %d.",
+                        "Power Automate returned HTTP %d on attempt %d. Response: %s",
                         resp.status_code,
                         attempt,
+                        resp.text[:200] if resp.text else '(empty)',
                     )
             except requests.exceptions.Timeout:
                 logger.warning(
